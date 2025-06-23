@@ -1,1 +1,6 @@
-print("Hello from a Python script in my repository!")
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def hello_world():
+    return 'Hello, Dockerized World!'

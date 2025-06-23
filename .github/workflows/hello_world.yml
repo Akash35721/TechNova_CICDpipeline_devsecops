@@ -1,4 +1,4 @@
-name: Code Interaction Workflow
+name: Docker Build Workflow
 
 on:
   push:
@@ -6,16 +6,11 @@ on:
       - main
 
 jobs:
-  run-python-script:
+  build-docker-image:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Run our Python script
-        run: python app.py
+      - name: Build the Docker image
+        run: docker build -t my-flask-app .
