@@ -11,7 +11,6 @@ jobs:
     name: 'Terraform Provisioning'
     runs-on: ubuntu-latest
     
-    
     # --------------------------------------------------------------------
     # KEY PART 1: This 'outputs' block is essential.
     # It makes the IP address available to other jobs.
