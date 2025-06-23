@@ -1,4 +1,4 @@
-name: Docker Build Workflow
+name: Deploy Flask App to EC2
 
 on:
   push:
@@ -6,11 +6,47 @@ on:
       - main
 
 jobs:
-  build-docker-image:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
 
-      - name: Build the Docker image
-        run: docker build -t my-flask-app .
+    steps:
+    # 1. Checks out your repository code so the workflow can access it
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # 2. Sets up Docker for building images
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    # 3. Logs into Docker Hub using the secrets you created
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # 4. Builds the Docker image from your Dockerfile and pushes it to your Docker Hub account
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: akash21357/technova-app:latest
+
+    # 5. Connects to your EC2 instance and deploys the new container
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          # Stop and remove any container with the same name, if it exists
+          docker stop technova-app || true
+          docker rm technova-app || true
+          
+          # Pull the latest version of the image from Docker Hub
+          docker pull akash21357/technova-app:latest
+          
+          # Run the new container
+          docker run -d --name technova-app -p 80:80 akash21357/technova-app:latest
