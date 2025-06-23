@@ -1,4 +1,4 @@
-name: Hello World Workflow
+name: Code Interaction Workflow
 
 on:
   push:
@@ -6,8 +6,16 @@ on:
       - main
 
 jobs:
-  say-hello:
+  run-python-script:
     runs-on: ubuntu-latest
     steps:
-      - name: Print a greeting
-        run: echo "Hello, GitHub Actions! I'm running a job."
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run our Python script
+        run: python app.py
