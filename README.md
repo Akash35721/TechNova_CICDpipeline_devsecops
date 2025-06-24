@@ -1,5 +1,5 @@
 hi this will be a readme 
-but now it will have the architecture 
+but now it will have the architecture 1
 
 
 
