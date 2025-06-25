@@ -1,4 +1,4 @@
-# --- .github/workflows/main.yml (Final Sudo Fix) ---
+# --- .github/workflows/main.yml (Final Resilient Version) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -63,7 +63,7 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
 
       # --- THIS IS THE FIX ---
-      # Each docker command is now prefixed with 'sudo' to grant it the correct permissions.
+      # This script now intelligently waits for Docker to be ready before proceeding.
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
@@ -71,7 +71,32 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
+            # Wait for Docker to be installed and ready
+            echo "Connecting to server... Waiting for Docker to start..."
+            for i in {1..30}; do # Loop for a maximum of 2.5 minutes (30 * 5 seconds)
+              # Check if the docker command exists and is executable
+              if command -v docker &> /dev/null && sudo docker --version &> /dev/null; then
+                echo "Docker is ready."
+                break
+              fi
+              echo "Still waiting for Docker... (attempt $i of 30)"
+              sleep 5
+            done
+
+            # Final check before failing the job
+            if ! command -v docker &> /dev/null; then
+              echo "FATAL: Docker command not found after waiting."
+              exit 1
+            fi
+
+            # Now, run the deployment commands
+            echo "Pulling latest image from DockerHub..."
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
+
+            echo "Stopping and removing any old container..."
             sudo docker stop technova-app || true
             sudo docker rm technova-app || true
+
+            echo "Starting new container..."
             sudo docker run -d --name technova-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
+            echo "Deployment to EC2 successful!"
