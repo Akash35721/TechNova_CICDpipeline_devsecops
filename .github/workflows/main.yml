@@ -1,4 +1,4 @@
-# --- .github/workflows/main.yml (Final Idempotent Version) ---
+# --- .github/workflows/main.yml (The Final, JQ-Powered Version) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -34,21 +34,22 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
 
-      # --- THIS IS THE FIX ---
-      # This step now handles both the first run and all subsequent re-runs.
+      # --- THIS IS THE FINAL FIX ---
+      # This version uses `terraform output -json` and the `jq` utility
+      # to guarantee a clean extraction of the IP address.
       - name: Get Public IP Address
         id: get_ip
         run: |
           # The local-exec provisioner creates this file only on the first run.
-          # Check if the file was created.
           if [ -f ip_address.txt ]; then
             # If the file exists (first run), read the IP from it.
             echo "IP file found (first run). Reading IP from file."
             ip_address=$(cat ip_address.txt)
           else
-            # If the file does not exist (re-run), read the IP from the Terraform state.
-            echo "IP file not found (re-run). Reading IP from Terraform state."
-            ip_address=$(terraform output -raw instance_public_ip)
+            # If the file does not exist (re-run), read the IP from the Terraform state using JSON.
+            echo "IP file not found (re-run). Reading IP from Terraform state via JSON."
+            # The 'jq -r' command safely parses the JSON output and extracts the raw string value.
+            ip_address=$(terraform output -json | jq -r '.instance_public_ip.value')
           fi
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
