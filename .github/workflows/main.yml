@@ -1,3 +1,4 @@
+# --- .github/workflows/main.yml (FINAL, ROBUST VERSION) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -11,8 +12,10 @@ jobs:
   provision:
     name: 'Terraform Provisioning'
     runs-on: ubuntu-latest
+    
+    # This block now points to our new, reliable step
     outputs:
-      instance_ip: ${{ steps.tf_apply.outputs.instance_public_ip }}
+      instance_ip: ${{ steps.set_output.outputs.instance_ip }}
 
     steps:
       - name: Checkout code
@@ -25,8 +28,6 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          # --- THIS IS THE FIX ---
-          # The secret name now correctly matches your GitHub secret settings.
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
@@ -34,8 +35,18 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
-        id: tf_apply
         run: terraform apply -auto-approve
+
+      # --- THIS IS THE FIX ---
+      # This new step explicitly gets the IP address from Terraform...
+      - name: Get Public IP from Terraform Output
+        id: get_ip
+        run: echo "ip=$(terraform output -raw instance_public_ip)" >> $GITHUB_OUTPUT
+        
+      # ...and this step formally sets it as a job output for other jobs to use.
+      - name: Set Job Output
+        id: set_output
+        run: echo "instance_ip=${{ steps.get_ip.outputs.ip }}" >> $GITHUB_OUTPUT
 
   # JOB 2: BUILDS THE APP AND DEPLOYS IT TO THE NEW SERVER
   deploy:
@@ -60,12 +71,13 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
 
+      # This step should now receive the IP address correctly
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ needs.provision.outputs.instance_ip }} # Uses the IP from the previous job
+          host: ${{ needs.provision.outputs.instance_ip }}
           username: ubuntu
-          key: ${{ secrets.EC2_KEY }} # Uses the private key from secrets
+          key: ${{ secrets.EC2_KEY }}
           script: |
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             docker stop technova-app || true
