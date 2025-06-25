@@ -1,4 +1,4 @@
-# --- .github/workflows/main.yml (The Final Failsafe Version) ---
+# --- .github/workflows/main.yml (The Final State Pull Version) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -35,7 +35,8 @@ jobs:
         run: terraform apply -auto-approve
 
       # --- THIS IS THE FINAL FIX ---
-      # This version uses an intermediate file for the JSON to prevent stream corruption.
+      # This version reads the IP directly from the Terraform state on S3,
+      # bypassing the buggy `terraform output` command on re-runs.
       - name: Get Public IP Address
         id: get_ip
         run: |
@@ -44,12 +45,9 @@ jobs:
             echo "IP file found (first run). Reading IP from file."
             ip_address=$(cat ip_address.txt)
           else
-            # If the file does not exist (re-run), use the failsafe JSON method.
-            echo "IP file not found (re-run). Reading IP from Terraform state via JSON file."
-            # 1. Save the raw JSON output to a temporary file. This avoids piping.
-            terraform output -json > tf_output.json
-            # 2. Safely parse the IP from the file using jq.
-            ip_address=$(cat tf_output.json | jq -r '.instance_public_ip.value')
+            # If the file does not exist (re-run), pull the state from S3 and parse it.
+            echo "IP file not found (re-run). Reading IP directly from Terraform state."
+            ip_address=$(terraform state pull | jq -r '.resources[] | select(.type == "aws_instance" and .name == "technova_server") | .instances[0].attributes.public_ip')
           fi
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
