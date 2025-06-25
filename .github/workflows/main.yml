@@ -1,4 +1,4 @@
-# --- .github/workflows/main.yml (The Final State Pull Version) ---
+# --- .github/workflows/main.yml (The Final, AWS CLI Version) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -35,8 +35,8 @@ jobs:
         run: terraform apply -auto-approve
 
       # --- THIS IS THE FINAL FIX ---
-      # This version reads the IP directly from the Terraform state on S3,
-      # bypassing the buggy `terraform output` command on re-runs.
+      # This version now uses the AWS CLI to get the IP on re-runs,
+      # completely bypassing the broken Terraform output command.
       - name: Get Public IP Address
         id: get_ip
         run: |
@@ -45,9 +45,10 @@ jobs:
             echo "IP file found (first run). Reading IP from file."
             ip_address=$(cat ip_address.txt)
           else
-            # If the file does not exist (re-run), pull the state from S3 and parse it.
-            echo "IP file not found (re-run). Reading IP directly from Terraform state."
-            ip_address=$(terraform state pull | jq -r '.resources[] | select(.type == "aws_instance" and .name == "technova_server") | .instances[0].attributes.public_ip')
+            # If the file does not exist (re-run), query the AWS API directly.
+            echo "IP file not found (re-run). Querying AWS API for instance IP."
+            # This command asks AWS for the public IP of the instance with the specific tag.
+            ip_address=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TechNova-Server-Terraform" "Name=instance-state-name,Values=running" --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
           fi
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
