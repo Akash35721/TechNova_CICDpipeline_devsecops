@@ -1,23 +1,22 @@
-# --- main.tf (FINAL CODE) ---
+# --- main.tf (Final Version with File Output) ---
 
 provider "aws" {
   region = "ap-south-1" 
 }
 
-# Creates a firewall (Security Group) for our server
 resource "aws_security_group" "technova_sg" {
   name        = "technova-instance-sg"
   description = "Allow HTTP and SSH traffic"
 
   ingress {
-    from_port   = 22    # Allows SSH
+    from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port   = 80    # Allows HTTP (web traffic)
+    from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
@@ -31,18 +30,12 @@ resource "aws_security_group" "technova_sg" {
   }
 }
 
-# Creates the EC2 Server
 resource "aws_instance" "technova_server" {
-  ami           = "ami-0f5ee92e2d63afc18" # Ubuntu 22.04 in ap-south-1
-  instance_type = "t2.micro"             # Free-tier eligible size
-
-  # This tells AWS to install the public key matching the NAME you created in Step 1.
-  # This is NOT a secret. It is just the name.
-  key_name      = "technova-key" # <-- This MUST match the name from the AWS console
-
+  ami           = "ami-0f5ee92e2d63afc18" 
+  instance_type = "t2.micro"             
+  key_name      = "technova-key" # Make sure this matches the name in your AWS Console
   vpc_security_group_ids = [aws_security_group.technova_sg.id]
 
-  # This script runs once on boot to install Docker.
   user_data = <<-EOF
               #!/bin/bash
               sudo apt-get update -y
@@ -57,7 +50,15 @@ resource "aws_instance" "technova_server" {
   }
 }
 
-# This makes the server's IP address available to other jobs.
-output "instance_public_ip" {
-  value = aws_instance.technova_server.public_ip
+# --- THIS IS THE NEW PART ---
+# This resource runs a command locally AFTER the technova_server is created.
+resource "null_resource" "save_ip" {
+  # This makes sure the EC2 instance is created first.
+  depends_on = [aws_instance.technova_server]
+
+  # This runs on the GitHub runner itself.
+  provisioner "local-exec" {
+    # This command writes the IP address into a file named ip_address.txt
+    command = "echo ${aws_instance.technova_server.public_ip} > ip_address.txt"
+  }
 }
