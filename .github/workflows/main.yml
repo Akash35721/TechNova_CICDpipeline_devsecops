@@ -1,4 +1,4 @@
-# --- .github/workflows/main.yml (The Final Self-Healing Version) ---
+# --- .github/workflows/main.yml (Handles Terminated State) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -35,13 +35,19 @@ jobs:
         run: terraform apply -auto-approve
 
       # --- THIS IS THE FIX ---
-      # This step now checks the instance state, starts it if needed,
-      # waits for it to be ready, and then gets the IP.
+      # This step now has logic to handle the 'terminated' state correctly.
       - name: Ensure Instance is Running and Get IP
         id: get_ip
         run: |
-          # First, get the Instance ID using the tag.
-          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TechNova-Server-Terraform" --query "Reservations[0].Instances[0].InstanceId" --output text)
+          # Get the Instance ID using the tag.
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TechNova-Server-Terraform" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
+          
+          if [ "$INSTANCE_ID" == "None" ]; then
+            echo "No running or stopped instance found with tag 'TechNova-Server-Terraform'. This is unexpected."
+            echo "Please re-run 'terraform apply' to create a new instance."
+            exit 1
+          fi
+          
           echo "Found Instance ID: $INSTANCE_ID"
 
           # Check the current state of the instance.
@@ -55,6 +61,9 @@ jobs:
             echo "Waiting for instance to enter 'running' state..."
             aws ec2 wait instance-running --instance-ids $INSTANCE_ID
             echo "Instance is now running."
+          elif [ "$INSTANCE_STATE" == "terminated" ]; then
+            echo "FATAL: The instance has been terminated. A new 'terraform apply' is required."
+            exit 1
           fi
           
           # Now that we know it's running, get the public IP.
@@ -68,6 +77,7 @@ jobs:
     needs: provision
 
     steps:
+      # ... (The rest of your deploy job remains exactly the same) ...
       - name: Checkout code
         uses: actions/checkout@v3
 
