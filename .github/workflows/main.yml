@@ -1,4 +1,3 @@
-# --- .github/workflows/main.yml (FINAL CODE) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -26,7 +25,9 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          # --- THIS IS THE FIX ---
+          # The secret name now correctly matches your GitHub secret settings.
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform Init
@@ -57,7 +58,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest # Uses your DockerHub username from secrets
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
