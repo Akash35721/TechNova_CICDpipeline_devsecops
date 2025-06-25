@@ -1,4 +1,4 @@
-# --- .github/workflows/main.yml (FINAL, ROBUST VERSION) ---
+# --- .github/workflows/main.yml (FINAL, MOST ROBUST VERSION) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -12,10 +12,8 @@ jobs:
   provision:
     name: 'Terraform Provisioning'
     runs-on: ubuntu-latest
-    
-    # This block now points to our new, reliable step
     outputs:
-      instance_ip: ${{ steps.set_output.outputs.instance_ip }}
+      instance_ip: ${{ steps.get_ip.outputs.ip }}
 
     steps:
       - name: Checkout code
@@ -38,15 +36,12 @@ jobs:
         run: terraform apply -auto-approve
 
       # --- THIS IS THE FIX ---
-      # This new step explicitly gets the IP address from Terraform...
+      # This step now uses a multi-line script to isolate the clean IP address.
       - name: Get Public IP from Terraform Output
         id: get_ip
-        run: echo "ip=$(terraform output -raw instance_public_ip)" >> $GITHUB_OUTPUT
-        
-      # ...and this step formally sets it as a job output for other jobs to use.
-      - name: Set Job Output
-        id: set_output
-        run: echo "instance_ip=${{ steps.get_ip.outputs.ip }}" >> $GITHUB_OUTPUT
+        run: |
+          ip_address=$(terraform output -raw instance_public_ip)
+          echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
   # JOB 2: BUILDS THE APP AND DEPLOYS IT TO THE NEW SERVER
   deploy:
@@ -71,7 +66,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
 
-      # This step should now receive the IP address correctly
+      # This step should now receive the clean IP address
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
