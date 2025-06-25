@@ -1,4 +1,4 @@
-# --- .github/workflows/main.yml (Final Daemon-Ready Fix) ---
+# --- .github/workflows/main.yml (Final Idempotent Version) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -12,7 +12,7 @@ jobs:
     name: 'Terraform Provisioning'
     runs-on: ubuntu-latest
     outputs:
-      instance_ip: ${{ steps.read_ip.outputs.ip }}
+      instance_ip: ${{ steps.get_ip.outputs.ip }}
 
     steps:
       - name: Checkout code
@@ -34,10 +34,22 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
 
-      - name: Read Public IP from file
-        id: read_ip
+      # --- THIS IS THE FIX ---
+      # This step now handles both the first run and all subsequent re-runs.
+      - name: Get Public IP Address
+        id: get_ip
         run: |
-          ip_address=$(cat ip_address.txt)
+          # The local-exec provisioner creates this file only on the first run.
+          # Check if the file was created.
+          if [ -f ip_address.txt ]; then
+            # If the file exists (first run), read the IP from it.
+            echo "IP file found (first run). Reading IP from file."
+            ip_address=$(cat ip_address.txt)
+          else
+            # If the file does not exist (re-run), read the IP from the Terraform state.
+            echo "IP file not found (re-run). Reading IP from Terraform state."
+            ip_address=$(terraform output -raw instance_public_ip)
+          fi
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
   deploy:
@@ -62,7 +74,6 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
 
-      # --- THIS IS THE FIX ---
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
@@ -73,7 +84,6 @@ jobs:
             # Wait for the Docker daemon itself to be responsive
             echo "Connecting to server... Waiting for Docker daemon to start..."
             for i in {1..30}; do
-              # The check is now `sudo docker info`. This command only succeeds when the daemon is running.
               if sudo docker info &> /dev/null; then
                 echo "Docker daemon is running."
                 break
@@ -82,24 +92,17 @@ jobs:
               sleep 5
             done
 
-            # Final check before failing the job
             if ! sudo docker info &> /dev/null; then
               echo "FATAL: Docker daemon did not start in time."
               exit 1
             fi
             
-            # Now that the daemon is running, the socket exists. Set permissions.
-            echo "Setting permissions for Docker socket..."
+            # Set permissions on the docker socket
             sudo chmod 666 /var/run/docker.sock
 
-            # Now, run the deployment commands
-            echo "Pulling latest image from DockerHub..."
+            # Run the deployment commands
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
-
-            echo "Stopping and removing any old container..."
             docker stop technova-app || true
             docker rm technova-app || true
-
-            echo "Starting new container..."
             docker run -d --name technova-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             echo "Deployment to EC2 successful!"
