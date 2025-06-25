@@ -1,55 +1,52 @@
-# Configure the AWS provider and specify the region
+# --- main.tf (FINAL CODE) ---
+
 provider "aws" {
-  region = "ap-south-1" # The region your instance is in
+  region = "ap-south-1" 
 }
 
-# 1. Create a Security Group to allow HTTP and SSH traffic
+# Creates a firewall (Security Group) for our server
 resource "aws_security_group" "technova_sg" {
   name        = "technova-instance-sg"
-  description = "Allow HTTP and SSH inbound traffic"
+  description = "Allow HTTP and SSH traffic"
 
-  # Rule to allow inbound SSH traffic
   ingress {
-    from_port   = 22
+    from_port   = 22    # Allows SSH
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Rule to allow inbound HTTP traffic
   ingress {
-    from_port   = 80
+    from_port   = 80    # Allows HTTP (web traffic)
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow all outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "technova-sg"
-  }
 }
 
-# 2. Create the EC2 Instance
+# Creates the EC2 Server
 resource "aws_instance" "technova_server" {
-  ami           = "ami-0f5ee92e2d63afc18" # AMI for Ubuntu 22.04 in ap-south-1 (Mumbai). Verify this is current.
-  instance_type = "t2.micro"             # As planned in your project scope 
+  ami           = "ami-0f5ee92e2d63afc18" # Ubuntu 22.04 in ap-south-1
+  instance_type = "t2.micro"             # Free-tier eligible size
 
-  # Attach the security group we created above
+  # This tells AWS to install the public key matching the NAME you created in Step 1.
+  # This is NOT a secret. It is just the name.
+  key_name      = "technova-key" # <-- This MUST match the name from the AWS console
+
   vpc_security_group_ids = [aws_security_group.technova_sg.id]
 
-  # This is where you automate the Docker installation!
+  # This script runs once on boot to install Docker.
   user_data = <<-EOF
               #!/bin/bash
-              sudo apt update -y
-              sudo apt install -y docker.io
+              sudo apt-get update -y
+              sudo apt-get install -y docker.io
               sudo systemctl start docker
               sudo systemctl enable docker
               sudo usermod -aG docker ubuntu
@@ -60,7 +57,7 @@ resource "aws_instance" "technova_server" {
   }
 }
 
-# 3. Output the Public IP Address of the instance
+# This makes the server's IP address available to other jobs.
 output "instance_public_ip" {
   value = aws_instance.technova_server.public_ip
 }

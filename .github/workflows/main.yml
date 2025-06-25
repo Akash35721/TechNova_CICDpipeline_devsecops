@@ -1,4 +1,6 @@
-name: Terraform Provisioning and Docker Deployment
+# --- .github/workflows/main.yml (FINAL CODE) ---
+
+name: TechNova CI/CD Pipeline
 
 on:
   push:
@@ -6,15 +8,10 @@ on:
       - main
 
 jobs:
-  # JOB 1: PROVISION INFRASTRUCTURE
+  # JOB 1: PROVISIONS THE INFRASTRUCTURE ON AWS
   provision:
     name: 'Terraform Provisioning'
     runs-on: ubuntu-latest
-    
-    # --------------------------------------------------------------------
-    # KEY PART 1: This 'outputs' block is essential.
-    # It makes the IP address available to other jobs.
-    # --------------------------------------------------------------------
     outputs:
       instance_ip: ${{ steps.tf_apply.outputs.instance_public_ip }}
 
@@ -22,42 +19,54 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # ... other steps like setup-terraform, configure-aws-credentials ...
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init
 
       - name: Terraform Apply
-        # --------------------------------------------------------------------
-        # KEY PART 2: This ID is essential for the 'outputs' block above.
-        # --------------------------------------------------------------------
-        id: tf_apply 
+        id: tf_apply
         run: terraform apply -auto-approve
-        env:
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
 
-  # JOB 2: BUILD AND DEPLOY APPLICATION
+  # JOB 2: BUILDS THE APP AND DEPLOYS IT TO THE NEW SERVER
   deploy:
     name: 'Build and Deploy Application'
     runs-on: ubuntu-latest
-    # --------------------------------------------------------------------
-    # KEY PART 3: This 'needs' context is essential.
-    # It links this job to the previous one.
-    # --------------------------------------------------------------------
-    needs: provision 
+    needs: provision # This job waits for the 'provision' job to finish
 
     steps:
-      # ... other steps like checkout, login-to-dockerhub, build-and-push ...
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest # Uses your DockerHub username from secrets
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
-          # --------------------------------------------------------------------
-          # KEY PART 4: This syntax is essential.
-          # It correctly reads the output from the 'provision' job.
-          # --------------------------------------------------------------------
-          host: ${{ needs.provision.outputs.instance_ip }}
+          host: ${{ needs.provision.outputs.instance_ip }} # Uses the IP from the previous job
           username: ubuntu
-          key: ${{ secrets.EC2_KEY }}
+          key: ${{ secrets.EC2_KEY }} # Uses the private key from secrets
           script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             docker stop technova-app || true
             docker rm technova-app || true
-            docker pull akash21357/technova-app:latest
-            docker run -d --name technova-app -p 80:80 akash21357/technova-app:latest
+            docker run -d --name technova-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
