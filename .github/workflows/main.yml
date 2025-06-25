@@ -1,4 +1,4 @@
-# --- .github/workflows/main.yml (Final Permission Fix) ---
+# --- .github/workflows/main.yml (Final Daemon-Ready Fix) ---
 
 name: TechNova CI/CD Pipeline
 
@@ -70,30 +70,36 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            # Wait for Docker to be installed
-            echo "Connecting to server... Waiting for Docker to start..."
+            # Wait for the Docker daemon itself to be responsive
+            echo "Connecting to server... Waiting for Docker daemon to start..."
             for i in {1..30}; do
-              if command -v docker &> /dev/null; then
-                echo "Docker command is available."
+              # The check is now `sudo docker info`. This command only succeeds when the daemon is running.
+              if sudo docker info &> /dev/null; then
+                echo "Docker daemon is running."
                 break
               fi
-              echo "Still waiting for Docker command... (attempt $i of 30)"
+              echo "Still waiting for Docker daemon... (attempt $i of 30)"
               sleep 5
             done
 
-            # --- THIS IS THE KEY FIX ---
-            # Forcefully set permissions on the docker socket to allow access.
+            # Final check before failing the job
+            if ! sudo docker info &> /dev/null; then
+              echo "FATAL: Docker daemon did not start in time."
+              exit 1
+            fi
+            
+            # Now that the daemon is running, the socket exists. Set permissions.
             echo "Setting permissions for Docker socket..."
             sudo chmod 666 /var/run/docker.sock
 
             # Now, run the deployment commands
             echo "Pulling latest image from DockerHub..."
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
 
             echo "Stopping and removing any old container..."
-            sudo docker stop technova-app || true
-            sudo docker rm technova-app || true
+            docker stop technova-app || true
+            docker rm technova-app || true
 
             echo "Starting new container..."
-            sudo docker run -d --name technova-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
+            docker run -d --name technova-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             echo "Deployment to EC2 successful!"
