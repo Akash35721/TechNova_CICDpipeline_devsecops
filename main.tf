@@ -1,12 +1,10 @@
-# --- main.tf (Final Version with S3 State Backend) ---
 
 terraform {
-  # This block tells Terraform to store its memory (state file) remotely in S3.
-  # This makes your infrastructure management robust and safe to re-run.
+
   backend "s3" {
-    bucket = "technova-tfstate-bucket-ak21357" # <-- IMPORTANT: CHANGE THIS
-    key    = "technova/terraform.tfstate"       # This is the path to the state file inside the bucket.
-    region = "ap-south-1"                      # The region of the bucket.
+    bucket = "technova-tfstate-bucket-akash21357" 
+    key    = "technova/terraform.tfstate"     
+    region = "ap-south-1"                    
   }
 }
 
