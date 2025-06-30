@@ -41,7 +41,7 @@ resource "aws_security_group" "technova_sg" {
 
 # This resource defines the EC2 virtual server itself.
 resource "aws_instance" "technova_server" {
-  ami           = "ami-0f5ee92e2d63afc18" 
+  ami           = "ami-0f918f7e67a3323f0" 
   instance_type = "t2.micro"             
   key_name      = "technova-key" # Make sure this matches the name in your AWS Console
   vpc_security_group_ids = [aws_security_group.technova_sg.id]
