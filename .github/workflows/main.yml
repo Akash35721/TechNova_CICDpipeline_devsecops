@@ -143,9 +143,7 @@ jobs:
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
 
-
-          
-  # NEW: SonarQube Code Quality Analysis Job
+           # NEW: SonarQube Code Quality Analysis Job
   sonarqube:
     name: 'SonarQube Code Analysis'
     runs-on: ubuntu-latest
@@ -183,7 +181,7 @@ jobs:
           
           # Get Quality Gate status from SonarCloud API
           QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
-            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=dhruvchaubey28_TechNova_CICDpipeline_devsecops" \
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Akash35721_TechNova_CICDpipeline_devsecops" \
             | jq -r '.projectStatus.status')
           
           echo "Quality Gate Status: $QUALITY_GATE_STATUS"
@@ -213,13 +211,17 @@ jobs:
             
             ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '🚀 Deployment will proceed automatically.' || '🛑 Deployment has been BLOCKED due to quality issues.' }}
             
-            View detailed results at: https://sonarcloud.io/project/overview?id=dhruvchaubey28_TechNova_CICDpipeline_devsecops
+            View detailed results at: https://sonarcloud.io/project/overview?id=Akash35721_TechNova_CICDpipeline_devsecops
             
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
             Author: ${{ github.actor }}
           to: ${{ secrets.NOTIFICATION_EMAIL }}
           from: TechNova CI/CD Pipeline
+
+
+
+ 
 
 
 
