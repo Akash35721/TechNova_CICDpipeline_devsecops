@@ -10,6 +10,44 @@
 </head>
 <body>
 
+   <div id="loader-wrapper">
+  <style>
+    #loader-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      /* Changed transition duration to 2.5 seconds */
+      transition: opacity 2.5s, visibility 2.5s;
+    }
+    #loader-wrapper img {
+      /* Made the sphere much larger */
+      width: 1500px; 
+      height: 1500px;
+    }
+  </style>
+  
+  <img src="https://i.pinimg.com/originals/79/a3/84/79a384c3c449ad01b0e57e790807b2c0.gif" alt="Loading...">
+
+  <script>
+    window.addEventListener('load', function() {
+      const loader = document.getElementById('loader-wrapper');
+      loader.style.opacity = '0';
+      loader.style.visibility = 'hidden';
+      setTimeout(() => {
+        loader.remove();
+        /* Changed timeout to match the 2.5s transition */
+      }, 2500); 
+    });
+  </script>
+</div>
+
     <section id="Home">
         <nav>
             <div class="logo">
@@ -47,7 +85,7 @@
 
         <p>
             
-            Welcome Akash ami issue , where every cup tells a story. Nestled in the heart of Dehradun, our cozy coffee haven invites you to embark on a journey of flavor and warmth. Step inside and breathe in the irresistible aroma of freshly brewed coffee beans, mingling harmoniously with the laughter of friends and the gentle hum of conversation. Whether you're seeking a tranquil moment of solitude with a steaming latte or a vibrant social scene over a robust espresso, Brew Haven is your sanctuary for all things coffee. Join us and savor the magic in every sip, as we craft moments of pure bliss, one cup at a time.        </p>
+            Welcome Akash , where every cup tells a story. Nestled in the heart of Dehradun, our cozy coffee haven invites you to embark on a journey of flavor and warmth. Step inside and breathe in the irresistible aroma of freshly brewed coffee beans, mingling harmoniously with the laughter of friends and the gentle hum of conversation. Whether you're seeking a tranquil moment of solitude with a steaming latte or a vibrant social scene over a robust espresso, Brew Haven is your sanctuary for all things coffee. Join us and savor the magic in every sip, as we craft moments of pure bliss, one cup at a time.        </p>
 
         <div class="main_btn">
             <a href="#">Order Now</a>
@@ -423,81 +461,7 @@
 
 
 
-<!-- 
-    Gallary 
 
-   <div class="gallary" id="Gallary">
-        <h1>Our<span>Gallary</span></h1>
-
-        <div class="gallary_image_box">
-            <div class="gallary_image">
-                <img src="static/image/gallary_1.jpg">
-
-                <h3>Food</h3>
-                <p>
-                    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Commodi sint eveniet laboriosam 
-                </p>
-                <a href="#" class="gallary_btn">Order Now</a>
-            </div>
-
-            <div class="gallary_image">
-                <img src="static/image/gallary_2.jpg">
-
-                <h3>Food</h3>
-                <p>
-                    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Commodi sint eveniet laboriosam 
-                </p>
-                <a href="#" class="gallary_btn">Order Now</a>
-            </div>
-
-            <div class="gallary_image">
-                <img src="static/image/gallary_3.jpg">
-
-                <h3>Food</h3>
-                <p>
-                    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Commodi sint eveniet laboriosam 
-                </p>
-                <a href="#" class="gallary_btn">Order Now</a>
-            </div>
-
-            <div class="gallary_image">
-                <img src="static/image/gallary_4.jpg">
-
-                <h3>Food</h3>
-                <p>
-                    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Commodi sint eveniet laboriosam 
-                </p>
-                <a href="#" class="gallary_btn">Order Now</a>
-            </div>
-
-            <div class="gallary_image">
-                <img src="static/image/gallary_5.jpg">
-
-                <h3>Food</h3>
-                <p>
-                    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Commodi sint eveniet laboriosam 
-                </p>
-                <a href="#" class="gallary_btn">Order Now</a>
-            </div>
-
-            <div class="gallary_image">
-                <img src="static/image/gallary_6.jpg">
-
-                <h3>Food</h3>
-                <p>
-                    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Commodi sint eveniet laboriosam 
-                </p>
-                <a href="#" class="gallary_btn">Order Now</a>
-            </div>
-
-        </div>
-
-    </div> -->
-
-
-
-
-    <!--Review-->
 
     <div class="review" id="Review">
         <h1>Customer<span>Review</span></h1>
@@ -750,7 +714,7 @@
             </div>
 
             <div class="profile">
-                <img src="static/image/james.jpg">
+                <img src="{{ url_for('static', filename='image/james.jpg') }}">
 
                 <div class="info">
                     <h2 class="name">Ambiance - James</h2>
@@ -827,7 +791,91 @@
     </footer>
 
 
+    <!-- Chatbox Overlay and Widget -->
+    <div id="chatbox-overlay"></div>
+    <div id="chatbox-container" style="display: flex;">
+        <div id="chatbox-header">
+            <img src="static/image/logo.png" alt="Bot Avatar" id="chatbox-avatar">
+            <span class="chatbox-title">Chat with Brew Haven</span>
+            <span id="chatbox-close">&times;</span>
+        </div>
+        <div id="chatbox-messages">
+            <div class="chatbox-msg bot">
+                <strong>BrewBot:</strong> Hi there! ☕ How can I help you today?
+            </div>
+        </div>
+        <div id="chatbox-input-area">
+            <input type="text" id="chatbox-input" placeholder="Type your message...">
+            <button id="chatbox-send">Send</button>
+        </div>
+    </div>
+    <!-- Show toggle button for re-access -->
+    <div id="chatbox-toggle" style="display: flex;"><i class="fa-solid fa-comments"></i></div>
 
-    
+    <script>
+        // Chatbox open/close logic
+        const chatboxContainer = document.getElementById('chatbox-container');
+        const chatboxToggle = document.getElementById('chatbox-toggle');
+        const chatboxClose = document.getElementById('chatbox-close');
+        const chatboxOverlay = document.getElementById('chatbox-overlay');
+        function openChatbox() {
+            chatboxContainer.style.display = 'flex';
+            chatboxOverlay.style.display = 'block';
+            chatboxToggle.style.display = 'none';
+        }
+        function closeChatbox() {
+            chatboxContainer.style.display = 'none';
+            chatboxOverlay.style.display = 'none';
+            chatboxToggle.style.display = 'flex';
+        }
+        chatboxToggle.onclick = openChatbox;
+        chatboxClose.onclick = closeChatbox;
+        chatboxOverlay.onclick = closeChatbox;
+        // Send message logic
+        const chatboxInput = document.getElementById('chatbox-input');
+        const chatboxSend = document.getElementById('chatbox-send');
+        const chatboxMessages = document.getElementById('chatbox-messages');
+        function appendMessage(msg, sender = 'user') {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chatbox-msg ' + sender;
+            msgDiv.innerHTML = sender === 'bot' ? `<strong>BrewBot:</strong> ${msg}` : msg;
+            chatboxMessages.appendChild(msgDiv);
+            chatboxMessages.scrollTop = chatboxMessages.scrollHeight;
+        }
+        chatboxSend.onclick = () => {
+            const msg = chatboxInput.value.trim();
+            if (msg) {
+                appendMessage(msg, 'user');
+                chatboxInput.value = '';
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: msg })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.response) {
+                        appendMessage(data.response, 'bot');
+                    } else {
+                        appendMessage('Sorry, something went wrong.', 'bot');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    appendMessage('Sorry, something went wrong.', 'bot');
+                });
+            }
+        };
+        chatboxInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') chatboxSend.click();
+        });
+        // Focus input on load
+        window.onload = () => {
+            chatboxInput.focus();
+        };
+    </script>
+
 </body>
 </html>
