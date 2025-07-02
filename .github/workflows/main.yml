@@ -101,6 +101,9 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
+            # Explicitly start the Docker service in case it's not running after a reboot.
+            echo "Ensuring Docker service is running..."
+            sudo systemctl start docker
             # Wait for the Docker daemon itself to be responsive
             echo "Connecting to server... Waiting for Docker daemon to start..."
             for i in {1..30}; do
