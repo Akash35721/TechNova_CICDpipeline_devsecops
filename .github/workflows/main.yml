@@ -72,75 +72,7 @@ jobs:
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
 
-      # --- .github/workflows/main.yml (With SonarQube Integration) ---
-
-name: TechNova CI/CD Pipeline
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
-jobs:
-  provision:
-    name: 'Terraform Provisioning'
-    runs-on: ubuntu-latest
-    outputs:
-      instance_ip: ${{ steps.get_ip.outputs.ip }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-      - name: Ensure Instance is Running and Get IP
-        id: get_ip
-        run: |
-          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TechNova-Server-Terraform" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
-          
-          if [ "$INSTANCE_ID" == "None" ]; then
-            echo "No running or stopped instance found with tag 'TechNova-Server-Terraform'. This is unexpected."
-            echo "Please re-run 'terraform apply' to create a new instance."
-            exit 1
-          fi
-          
-          echo "Found Instance ID: $INSTANCE_ID"
-
-          INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].State.Name" --output text)
-          echo "Instance state is: $INSTANCE_STATE"
-
-          if [ "$INSTANCE_STATE" == "stopped" ]; then
-            echo "Instance is stopped. Sending start command..."
-            aws ec2 start-instances --instance-ids $INSTANCE_ID
-            echo "Waiting for instance to enter 'running' state..."
-            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
-            echo "Instance is now running."
-          elif [ "$INSTANCE_STATE" == "terminated" ]; then
-            echo "FATAL: The instance has been terminated. A new 'terraform apply' is required."
-            exit 1
-          fi
-          
-          ip_address=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
-          echo "Instance Public IP: $ip_address"
-          echo "ip=${ip_address}" >> $GITHUB_OUTPUT
+    
 
 
            # NEW: SonarQube Code Quality Analysis Job
