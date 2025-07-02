@@ -71,6 +71,159 @@ jobs:
           echo "Instance Public IP: $ip_address"
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
+
+      # --- .github/workflows/main.yml (With SonarQube Integration) ---
+
+name: TechNova CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  provision:
+    name: 'Terraform Provisioning'
+    runs-on: ubuntu-latest
+    outputs:
+      instance_ip: ${{ steps.get_ip.outputs.ip }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: Ensure Instance is Running and Get IP
+        id: get_ip
+        run: |
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TechNova-Server-Terraform" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
+          
+          if [ "$INSTANCE_ID" == "None" ]; then
+            echo "No running or stopped instance found with tag 'TechNova-Server-Terraform'. This is unexpected."
+            echo "Please re-run 'terraform apply' to create a new instance."
+            exit 1
+          fi
+          
+          echo "Found Instance ID: $INSTANCE_ID"
+
+          INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].State.Name" --output text)
+          echo "Instance state is: $INSTANCE_STATE"
+
+          if [ "$INSTANCE_STATE" == "stopped" ]; then
+            echo "Instance is stopped. Sending start command..."
+            aws ec2 start-instances --instance-ids $INSTANCE_ID
+            echo "Waiting for instance to enter 'running' state..."
+            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+            echo "Instance is now running."
+          elif [ "$INSTANCE_STATE" == "terminated" ]; then
+            echo "FATAL: The instance has been terminated. A new 'terraform apply' is required."
+            exit 1
+          fi
+          
+          ip_address=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+          echo "Instance Public IP: $ip_address"
+          echo "ip=${ip_address}" >> $GITHUB_OUTPUT
+
+
+
+          
+  # NEW: SonarQube Code Quality Analysis Job
+  sonarqube:
+    name: 'SonarQube Code Analysis'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Disable shallow clone for better analysis
+
+      - name: Set up Python (if your project uses Python)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies (skip tests for now)
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          echo "No tests directory found - SonarQube will analyze code quality without test coverage"
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # NEW: Explicit Quality Gate Check
+      - name: Check Quality Gate Status
+        id: quality_gate
+        run: |
+          echo "Waiting for Quality Gate result..."
+          sleep 30  # Wait for SonarCloud to process
+          
+          # Get Quality Gate status from SonarCloud API
+          QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=dhruvchaubey28_TechNova_CICDpipeline_devsecops" \
+            | jq -r '.projectStatus.status')
+          
+          echo "Quality Gate Status: $QUALITY_GATE_STATUS"
+          
+          if [ "$QUALITY_GATE_STATUS" = "OK" ]; then
+            echo "✅ Quality Gate PASSED - Deployment can proceed"
+            echo "quality_gate_passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Quality Gate FAILED - Deployment will be blocked"
+            echo "quality_gate_passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Send SonarQube Results via Email
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "TechNova SonarQube Analysis Results - ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '✅ PASSED' || '❌ FAILED' }}"
+          body: |
+            SonarQube analysis completed for commit ${{ github.sha }}.
+            
+            🎯 Quality Gate Status: ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && 'PASSED ✅' || 'FAILED ❌' }}
+            
+            ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '🚀 Deployment will proceed automatically.' || '🛑 Deployment has been BLOCKED due to quality issues.' }}
+            
+            View detailed results at: https://sonarcloud.io/project/overview?id=dhruvchaubey28_TechNova_CICDpipeline_devsecops
+            
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: TechNova CI/CD Pipeline
+
+
+
+          
   deploy:
     name: 'Build and Deploy Application'
     runs-on: ubuntu-latest
