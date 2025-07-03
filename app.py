@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 
 # Configure the Gemini API
-genai.configure(api_key="AIzaSyCVr01MKaefAm1aaJe7S__yQVxCooZMUSE")                
+genai.configure(api_key="gemini api kety")                
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 BUSINESS_CONTEXT = """
