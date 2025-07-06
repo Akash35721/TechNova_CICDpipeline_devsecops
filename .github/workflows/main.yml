@@ -99,7 +99,7 @@ jobs:
           echo "No tests directory found - SonarQube will analyze code quality without test coverage"
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: sonarqube-scan-action
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -214,5 +214,7 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             docker stop technova-app || true
             docker rm technova-app || true
-            docker run -d --name technova-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
+            docker run -d --name technova-app -p 80:80 \
+              -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             echo "Deployment to EC2 successful!"
