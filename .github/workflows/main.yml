@@ -1,5 +1,3 @@
-# --- .github/workflows/main.yml (Handles Terminated State) ---
-
 name: TechNova CI/CD Pipeline
 
 on:
@@ -13,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       instance_ip: ${{ steps.get_ip.outputs.ip }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -34,27 +31,17 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
 
-      # --- THIS IS THE FIX ---
-      # This step now has logic to handle the 'terminated' state h correctly.
       - name: Ensure Instance is Running and Get IP
         id: get_ip
         run: |
-          # Get the Instance ID using the tag.
           INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TechNova-Server-Terraform" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
-          
           if [ "$INSTANCE_ID" == "None" ]; then
-            echo "No running or stopped instance found with tag 'TechNova-Server-Terraform'. This is unexpected."
-            echo "Please re-run 'terraform apply' to create a new instance."
+            echo "No running or stopped instance found with tag 'TechNova-Server-Terraform'."
             exit 1
           fi
-          
           echo "Found Instance ID: $INSTANCE_ID"
-
-          # Check the current state of the instance.
           INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].State.Name" --output text)
           echo "Instance state is: $INSTANCE_STATE"
-
-          # If the instance is stopped, start it.
           if [ "$INSTANCE_STATE" == "stopped" ]; then
             echo "Instance is stopped. Sending start command..."
             aws ec2 start-instances --instance-ids $INSTANCE_ID
@@ -65,59 +52,45 @@ jobs:
             echo "FATAL: The instance has been terminated. A new 'terraform apply' is required."
             exit 1
           fi
-          
-          # Now that we know it's running, get the public IP.
           ip_address=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
           echo "Instance Public IP: $ip_address"
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
-
-    
-
-
-           # NEW: SonarQube Code Quality Analysis Job
   sonarqube:
     name: 'SonarQube Code Analysis'
     runs-on: ubuntu-latest
-    
+    outputs:
+      quality_gate_passed: ${{ steps.quality_gate.outputs.quality_gate_passed }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Disable shallow clone for better analysis
+          fetch-depth: 0
 
-      - name: Set up Python (if your project uses Python)
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Install dependencies (skip tests for now)
+      - name: Install dependencies
         run: |
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
-          echo "No tests directory found - SonarQube will analyze code quality without test coverage"
 
       - name: SonarCloud Scan
-        uses: sonarqube-scan-action
+        uses: SonarSource/sonarqube-scan-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # NEW: Explicit Quality Gate Check
       - name: Check Quality Gate Status
         id: quality_gate
         run: |
           echo "Waiting for Quality Gate result..."
-          sleep 30  # Wait for SonarCloud to process
-          
-          # Get Quality Gate status from SonarCloud API
-          QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
-            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Akash35721_TechNova_CICDpipeline_devsecops" \
-            | jq -r '.projectStatus.status')
-          
+          sleep 30
+          QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Akash35721_TechNova_CICDpipeline_devsecops" | jq -r '.projectStatus.status')
           echo "Quality Gate Status: $QUALITY_GATE_STATUS"
-          
           if [ "$QUALITY_GATE_STATUS" = "OK" ]; then
             echo "✅ Quality Gate PASSED - Deployment can proceed"
             echo "quality_gate_passed=true" >> $GITHUB_OUTPUT
@@ -138,33 +111,21 @@ jobs:
           subject: "TechNova SonarQube Analysis Results - ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '✅ PASSED' || '❌ FAILED' }}"
           body: |
             SonarQube analysis completed for commit ${{ github.sha }}.
-            
             🎯 Quality Gate Status: ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && 'PASSED ✅' || 'FAILED ❌' }}
-            
             ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '🚀 Deployment will proceed automatically.' || '🛑 Deployment has been BLOCKED due to quality issues.' }}
-            
             View detailed results at: https://sonarcloud.io/project/overview?id=Akash35721_TechNova_CICDpipeline_devsecops
-            
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
             Author: ${{ github.actor }}
           to: ${{ secrets.NOTIFICATION_EMAIL }}
           from: TechNova CI/CD Pipeline
 
-
-
- 
-
-
-
-          
   deploy:
     name: 'Build and Deploy Application'
     runs-on: ubuntu-latest
-    needs: provision
-
+    needs: [provision, sonarqube]
+    if: needs.sonarqube.outputs.quality_gate_passed == 'true'
     steps:
-      # ... (The rest of your deploy job remains exactly the same) ...
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -188,10 +149,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            # Explicitly start the Docker service in case it's not running after a reboot.
             echo "Ensuring Docker service is running..."
             sudo systemctl start docker
-            # Wait for the Docker daemon itself to be responsive
             echo "Connecting to server... Waiting for Docker daemon to start..."
             for i in {1..30}; do
               if sudo docker info &> /dev/null; then
@@ -201,16 +160,11 @@ jobs:
               echo "Still waiting for Docker daemon... (attempt $i of 30)"
               sleep 5
             done
-
             if ! sudo docker info &> /dev/null; then
               echo "FATAL: Docker daemon did not start in time."
               exit 1
             fi
-            
-            # Set permissions on the docker socket
             sudo chmod 666 /var/run/docker.sock
-
-            # Run the deployment commands
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             docker stop technova-app || true
             docker rm technova-app || true
