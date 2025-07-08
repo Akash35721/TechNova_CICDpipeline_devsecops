@@ -182,13 +182,21 @@ jobs:
             sudo apt-get install -y build-essential
             sudo killall noip2 || true # Kill any old running process
             cd /usr/local/src/
-            sudo wget -O noip-duc-linux.tar.gz http://www.noip.com/client/linux/noip-duc-linux.tar.gz
+            sudo wget -O noip-duc-linux.tar.gz https://www.noip.com/client/linux/noip-duc-linux.tar.gz
             sudo tar xf noip-duc-linux.tar.gz
             cd noip-2.1.9-1/
             sudo make
             sudo cp noip2 /usr/local/bin/
-            # Create the configuration file non-interactively
-            sudo /usr/local/bin/noip2 -C -u "${{ secrets.NOIP_USERNAME }}" -p "${{ secrets.NOIP_PASSWORD }}"
+            # Only configure if config does not exist
+            if [ ! -f /usr/local/etc/no-ip2.conf ]; then
+              echo "No-IP config not found. Running configuration..."
+              sudo /usr/local/bin/noip2 -C -u "${{ secrets.NOIP_USERNAME }}" -p "${{ secrets.NOIP_PASSWORD }}"
+            else
+              echo "No-IP config already exists. Skipping configuration."
+            fi
+            # Start No-IP client
+            sudo killall noip2 || true
+            sudo /usr/local/bin/noip2
             
             # Pull the latest application image
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
