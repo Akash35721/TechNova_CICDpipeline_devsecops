@@ -82,7 +82,7 @@ resource "null_resource" "save_ip" {
   # This ensures the EC2 instance is fully created before this runs.
   depends_on = [aws_instance.technova_server]
 
-  # This runs on the GitHub runner itself.
+  # This runs on the GitHub  runner itself.
   provisioner "local-exec" {
     # This command writes the clean IP address into a file named ip_address.txt
     command = "echo ${aws_instance.technova_server.public_ip} > ip_address.txt"
