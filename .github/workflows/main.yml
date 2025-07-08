@@ -180,15 +180,18 @@ jobs:
             echo "Installing No-IP client from source..."
             sudo apt-get update
             sudo apt-get install -y build-essential
-            # Kill any old running noip2 process before installing
+            # Kill any old running noip2 process to prevent "Text file busy" error
             sudo killall noip2 || true
             cd /usr/local/src/
             sudo wget -N http://www.noip.com/client/linux/noip-duc-linux.tar.gz
             sudo tar xf noip-duc-linux.tar.gz
             cd noip-2.1.9-1/
-            # This next line creates a configuration file with your details non-interactively
-            sudo DEBIAN_FRONTEND=noninteractive make install
-            sudo /usr/local/bin/noip2
+            # Manually create the configuration file to make the process non-interactive
+            sudo echo "USER=${{ secrets.NOIP_USERNAME }}" > no-ip2.conf
+            sudo echo "PASS=${{ secrets.NOIP_PASSWORD }}" >> no-ip2.conf
+            sudo echo "HOST=brewhaven-app.ddns.net" >> no-ip2.conf
+            sudo echo "INTERVAL=30" >> no-ip2.conf
+            sudo make install
             
             # Pull the latest application image
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
