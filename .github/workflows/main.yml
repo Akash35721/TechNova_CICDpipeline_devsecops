@@ -149,7 +149,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            # Ensure Docker is running (your original, correct code)
+            # Ensure Docker is running
             echo "Ensuring Docker service is running..."
             sudo systemctl start docker
             echo "Connecting to server... Waiting for Docker daemon to start..."
@@ -170,18 +170,19 @@ jobs:
             # Create the docker network if it doesn't exist
             docker network create technova_network || true
 
-            # Stop and remove any old containers to ensure a clean start
+            # Stop and remove any old containers
             docker stop technova-app || true
             docker rm technova-app || true
             docker stop caddy || true
             docker rm caddy || true
 
-            # Install and configure the No-IP client automatically
+            # Enable universe repo and install No-IP client
+            sudo add-apt-repository universe
             sudo apt-get update
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y noip2
             sudo noip2 -C -u ${{ secrets.NOIP_USERNAME }} -p ${{ secrets.NOIP_PASSWORD }}
             
-            # Pull the latest version of your application from DockerHub
+            # Pull the latest application image
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             
             # Run your Flask application on the shared network
