@@ -176,10 +176,14 @@ jobs:
             docker stop caddy || true
             docker rm caddy || true
 
-            # Enable universe repo and install No-IP client
-            sudo add-apt-repository universe
+            # Manually install No-IP client from source
             sudo apt-get update
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y noip2
+            sudo apt-get install -y build-essential
+            cd /usr/local/src/
+            sudo wget http://www.noip.com/client/linux/noip-duc-linux.tar.gz
+            sudo tar xf noip-duc-linux.tar.gz
+            cd noip-2.1.9-1/
+            sudo make install
             sudo noip2 -C -u ${{ secrets.NOIP_USERNAME }} -p ${{ secrets.NOIP_PASSWORD }}
             
             # Pull the latest application image
