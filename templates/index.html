@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Brew Haven</title>
     <link rel="stylesheet" href="static/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" integrity="sha512-KfkfwYDsLkIlwQp6LFnl8zNdLGxu9YAA1QvwINks4PhcElQSvqcyVLLD9aMhXd13uQjoXtEKNosOWaZqXgel0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" xintegrity="sha512-KfkfwYDsLkIlwQp6LFnl8zNdLGxu9YAA1QvwINks4PhcElQSvqcyVLLD9aMhXd13uQjoXtEKNosOWaZqXgel0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
 
@@ -23,11 +23,9 @@
       justify-content: center;
       align-items: center;
       z-index: 9999;
-      /* Changed transition duration to 2.5 seconds */
       transition: opacity 2.5s, visibility 2.5s;
     }
     #loader-wrapper img {
-      /* Made the sphere much larger */
       width: 1500px; 
       height: 1500px;
     }
@@ -42,7 +40,6 @@
       loader.style.visibility = 'hidden';
       setTimeout(() => {
         loader.remove();
-        /* Changed timeout to match the 2.5s transition */
       }, 2500); 
     });
   </script>
@@ -58,7 +55,6 @@
                 <li><a href="#Home">Home</a></li>
                 <li><a href="#About">About</a></li>
                 <li><a href="#Menu">Menu</a></li>
-                <li><a href="#Gallary">Gallary</a></li>
                 <li><a href="#Review">Review</a></li>
                 <li><a href="#Order">Order</a></li>
             </ul>
@@ -84,8 +80,8 @@
         </div>
 
         <p>
-            
-            Welcome Akash checking sonarcube take 3  , where every cup tells a story. Nestled in the heart of Dehradun, our cozy coffee haven invites you to embark on a journey of flavor and warmth. Step inside and breathe in the irresistible aroma of freshly brewed coffee beans, mingling harmoniously with the laughter of friends and the gentle hum of conversation. Whether you're seeking a tranquil moment of solitude with a steaming latte or a vibrant social scene over a robust espresso, Brew Haven is your sanctuary for all things coffee. Join us and savor the magic in every sip, as we craft moments of pure bliss, one cup at a time.        </p>
+            Welcome Akash checking sonarcube take 3, where every cup tells a story. Nestled in the heart of Dehradun, our cozy coffee haven invites you to embark on a journey of flavor and warmth. Step inside and breathe in the irresistible aroma of freshly brewed coffee beans, mingling harmoniously with the laughter of friends and the gentle hum of conversation. Whether you're seeking a tranquil moment of solitude with a steaming latte or a vibrant social scene over a robust espresso, Brew Haven is your sanctuary for all things coffee. Join us and savor the magic in every sip, as we craft moments of pure bliss, one cup at a time.
+        </p>
 
         <div class="main_btn">
             <a href="#">Order Now</a>
@@ -95,8 +91,6 @@
     </section>
 
 
-
-    <!--About-->
 
     <div class="about" id="About">
         <div class="about_main">
@@ -120,8 +114,6 @@
     </div>
 
 
-
-    <!--Menu-->
 
     <div class="menu" id="Menu">
         <h1>Our<span>Menu</span></h1>
@@ -461,8 +453,6 @@
 
 
 
-
-
     <div class="review" id="Review">
         <h1>Customer<span>Review</span></h1>
 
@@ -576,8 +566,6 @@
                         <i class="fa-solid fa-star"></i>
                         <i class="fa-solid fa-star"></i>
                         <i class="fa-solid fa-star"></i>
-                        <!-- <i class="fa-solid fa-star"></i>
-                        <i class="fa-solid fa-star-half-stroke"></i> -->
                         <i class="far fa-star"></i>
                         <i class="far fa-star"></i>
                     </div>
@@ -602,8 +590,6 @@
     </div>
 
 
-
-    <!--Order-->
 
     <div class="order" id="Order">
         <h1><span>Order</span>Now</h1>
@@ -655,8 +641,6 @@
     </div>
 
 
-
-    <!--Team-->
 
     <div class="team">
         <h1>Our<span>Team</span></h1>
@@ -735,10 +719,6 @@
     </div>
 
 
-<!-- <iframe width="640px" height="480px" src="https://forms.office.com/r/tc6juF3t68?embed=true" frameborder="0" marginwidth="0" marginheight="0" style="border: none; max-width:100%; max-height:100vh" allowfullscreen webkitallowfullscreen mozallowfullscreen msallowfullscreen> </iframe> -->
-
-
-    <!--Footer-->
 
     <footer>
         <div class="footer_main">
@@ -757,7 +737,6 @@
                 <p>Home</p>
                 <p>About</p>
                 <p>Menu</p>
-                <p>Gallary</p>
                 <p>Order</p>
             </div>
 
@@ -791,90 +770,191 @@
     </footer>
 
 
-    <!-- Chatbox Overlay and Widget -->
-    <div id="chatbox-overlay"></div>
-    <div id="chatbox-container" style="display: flex;">
+    <!-- Chatbot Widget -->
+    <div id="chatbox-container" style="display: none;">
         <div id="chatbox-header">
             <img src="static/image/logo.png" alt="Bot Avatar" id="chatbox-avatar">
             <span class="chatbox-title">Chat with Brew Haven</span>
             <span id="chatbox-close">&times;</span>
         </div>
         <div id="chatbox-messages">
-            <div class="chatbox-msg bot">
-                <strong>BrewBot:</strong> Hi there! ☕ How can I help you today?
-            </div>
+            <!-- Messages will be dynamically added here -->
+        </div>
+        <div id="quick-replies-container" class="quick-replies">
+            <!-- Quick reply buttons will be dynamically added here -->
         </div>
         <div id="chatbox-input-area">
             <input type="text" id="chatbox-input" placeholder="Type your message...">
             <button id="chatbox-send">Send</button>
         </div>
     </div>
-    <!-- Show toggle button for re-access -->
+    
+    <!-- Chatbot Toggle Button -->
     <div id="chatbox-toggle" style="display: flex;"><i class="fa-solid fa-comments"></i></div>
 
     <script>
-        // Chatbox open/close logic
-        const chatboxContainer = document.getElementById('chatbox-container');
-        const chatboxToggle = document.getElementById('chatbox-toggle');
-        const chatboxClose = document.getElementById('chatbox-close');
-        const chatboxOverlay = document.getElementById('chatbox-overlay');
-        function openChatbox() {
-            chatboxContainer.style.display = 'flex';
-            chatboxOverlay.style.display = 'block';
-            chatboxToggle.style.display = 'none';
-        }
-        function closeChatbox() {
-            chatboxContainer.style.display = 'none';
-            chatboxOverlay.style.display = 'none';
-            chatboxToggle.style.display = 'flex';
-        }
-        chatboxToggle.onclick = openChatbox;
-        chatboxClose.onclick = closeChatbox;
-        chatboxOverlay.onclick = closeChatbox;
-        // Send message logic
-        const chatboxInput = document.getElementById('chatbox-input');
-        const chatboxSend = document.getElementById('chatbox-send');
-        const chatboxMessages = document.getElementById('chatbox-messages');
-        function appendMessage(msg, sender = 'user') {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'chatbox-msg ' + sender;
-            msgDiv.innerHTML = sender === 'bot' ? `<strong>BrewBot:</strong> ${msg}` : msg;
-            chatboxMessages.appendChild(msgDiv);
-            chatboxMessages.scrollTop = chatboxMessages.scrollHeight;
-        }
-        chatboxSend.onclick = () => {
-            const msg = chatboxInput.value.trim();
-            if (msg) {
-                appendMessage(msg, 'user');
-                chatboxInput.value = '';
-                fetch('/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ message: msg })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.response) {
-                        appendMessage(data.response, 'bot');
-                    } else {
-                        appendMessage('Sorry, something went wrong.', 'bot');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    appendMessage('Sorry, something went wrong.', 'bot');
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatboxContainer = document.getElementById('chatbox-container');
+            const chatboxHeader = document.getElementById('chatbox-header');
+            const chatboxToggle = document.getElementById('chatbox-toggle');
+            const chatboxClose = document.getElementById('chatbox-close');
+            const chatboxInput = document.getElementById('chatbox-input');
+            const chatboxSend = document.getElementById('chatbox-send');
+            const chatboxMessages = document.getElementById('chatbox-messages');
+            const quickRepliesContainer = document.getElementById('quick-replies-container');
+
+            let isChatboxOpen = false;
+
+            // --- Open/Close Logic ---
+            const openChatbox = () => {
+                chatboxContainer.style.display = 'flex';
+                chatboxToggle.style.display = 'none';
+                chatboxToggle.classList.remove('new-message-pulse');
+                isChatboxOpen = true;
+                chatboxInput.focus();
+                // Send initial greeting if chat is empty
+                if (chatboxMessages.children.length === 0) {
+                    handleSendMessage("Hello", true); // Use a hidden message to trigger the welcome
+                }
+            };
+
+            const closeChatbox = () => {
+                chatboxContainer.style.display = 'none';
+                chatboxToggle.style.display = 'flex';
+                isChatboxOpen = false;
+            };
+
+            chatboxToggle.onclick = openChatbox;
+            chatboxClose.onclick = closeChatbox;
+
+            // --- Message Handling ---
+            const appendMessage = (msg, sender = 'user') => {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `chatbox-msg ${sender}`;
+                msgDiv.innerHTML = sender === 'bot' ? `<strong>BrewBot:</strong> ${msg}` : msg;
+                chatboxMessages.appendChild(msgDiv);
+                scrollToBottom();
+            };
+
+            const processBotResponse = (response) => {
+                const quickReplyRegex = /\[quick_replies:(.*?)\]/;
+                const match = response.match(quickReplyRegex);
+                
+                let cleanResponse = response.replace(quickReplyRegex, '').trim();
+                appendMessage(cleanResponse, 'bot');
+
+                if (match && match[1]) {
+                    const replies = match[1].split('|');
+                    renderQuickReplies(replies);
+                }
+            };
+
+            const renderQuickReplies = (replies) => {
+                quickRepliesContainer.innerHTML = ''; // Clear previous buttons
+                replies.forEach(replyText => {
+                    const button = document.createElement('button');
+                    button.className = 'quick-reply-btn';
+                    button.textContent = replyText;
+                    button.onclick = () => {
+                        handleSendMessage(replyText);
+                    };
+                    quickRepliesContainer.appendChild(button);
                 });
-            }
-        };
-        chatboxInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') chatboxSend.click();
+            };
+            
+            const handleSendMessage = (message, isHidden = false) => {
+                const msg = message.trim();
+                if (msg) {
+                    if (!isHidden) {
+                        appendMessage(msg, 'user');
+                    }
+                    chatboxInput.value = '';
+                    quickRepliesContainer.innerHTML = ''; // Clear buttons after sending a message
+                    showTypingIndicator();
+
+                    fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: msg })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        removeTypingIndicator();
+                        if (data.response) {
+                            processBotResponse(data.response);
+                            if (!isChatboxOpen) {
+                                chatboxToggle.classList.add('new-message-pulse');
+                            }
+                        } else {
+                            appendMessage('Sorry, something went wrong.', 'bot');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        removeTypingIndicator();
+                        appendMessage('Sorry, something went wrong.', 'bot');
+                    });
+                }
+            };
+
+            chatboxSend.onclick = () => handleSendMessage(chatboxInput.value);
+            chatboxInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleSendMessage(chatboxInput.value);
+            });
+            
+            // --- Utility and Animation Functions ---
+            const showTypingIndicator = () => {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                typingDiv.innerHTML = '<span></span><span></span><span></span>';
+                chatboxMessages.appendChild(typingDiv);
+                scrollToBottom();
+            };
+
+            const removeTypingIndicator = () => {
+                const indicator = chatboxMessages.querySelector('.typing-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            };
+
+            const scrollToBottom = () => {
+                chatboxMessages.scrollTop = chatboxMessages.scrollHeight;
+            };
+
+            // --- Draggable Logic ---
+            let isDragging = false;
+            let offset = { x: 0, y: 0 };
+
+            chatboxHeader.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                offset.x = e.clientX - chatboxContainer.offsetLeft;
+                offset.y = e.clientY - chatboxContainer.offsetTop;
+                chatboxHeader.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                let newX = e.clientX - offset.x;
+                let newY = e.clientY - offset.y;
+                const containerRect = chatboxContainer.getBoundingClientRect();
+                const viewWidth = document.documentElement.clientWidth;
+                const viewHeight = document.documentElement.clientHeight;
+
+                if (newX < 0) newX = 0;
+                if (newY < 0) newY = 0;
+                if (newX + containerRect.width > viewWidth) newX = viewWidth - containerRect.width;
+                if (newY + containerRect.height > viewHeight) newY = viewHeight - containerRect.height;
+                
+                chatboxContainer.style.left = `${newX}px`;
+                chatboxContainer.style.top = `${newY}px`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                chatboxHeader.style.cursor = 'move';
+            });
         });
-        // Focus input on load
-        window.onload = () => {
-            chatboxInput.focus();
-        };
     </script>
 
 </body>
