@@ -209,7 +209,7 @@ jobs:
               sudo /usr/local/bin/noip2 -C \
                 -u "${{ secrets.NOIP_USERNAME }}" \
                 -p "${{ secrets.NOIP_PASSWORD }}" \
-                -i "${INTERFACE}"
+                -I "${INTERFACE}"
             else
               echo "No-IP config already exists. Skipping configuration."
             fi
