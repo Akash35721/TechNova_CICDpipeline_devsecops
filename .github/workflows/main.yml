@@ -198,36 +198,89 @@ jobs:
             # Configure No-IP client if config doesn't exist
             if [ ! -f /usr/local/etc/no-ip2.conf ]; then
               echo "Configuring No-IP client..."
-              # Create expect script for non-interactive configuration
-              cat > /tmp/noip_config.exp << 'EOF'
+              
+              # Escape special characters in credentials
+              ESCAPED_USERNAME=$(printf '%s\n' "${{ secrets.NOIP_USERNAME }}" | sed 's/[[\.*^$()+?{|]/\\&/g')
+              ESCAPED_PASSWORD=$(printf '%s\n' "${{ secrets.NOIP_PASSWORD }}" | sed 's/[[\.*^$()+?{|]/\\&/g')
+              
+              # Create expect script with properly escaped credentials
+              cat > /tmp/noip_config.exp << EOF
             #!/usr/bin/expect -f
             set timeout 30
+            set username "$ESCAPED_USERNAME"
+            set password "$ESCAPED_PASSWORD"
+            
             spawn sudo /usr/local/bin/noip2 -C
-            expect "Please enter the login/email*"
-            send "$env(NOIP_USERNAME)\r"
-            expect "Please enter the password*"
-            send "$env(NOIP_PASSWORD)\r"
-            expect "Please select the Internet interface*"
-            send "0\r"
-            expect "Please enter an update interval*"
-            send "\r"
-            expect "Do you wish to run something at successful update*"
-            send "N\r"
-            expect eof
+            expect {
+                "Please enter the login/email*" {
+                    send "\$username\r"
+                    exp_continue
+                }
+                "Please enter the password*" {
+                    send "\$password\r"
+                    exp_continue
+                }
+                "You have entered an incorrect username" {
+                    puts "ERROR: Invalid No-IP credentials!"
+                    exit 1
+                }
+                "an incorrect password" {
+                    puts "ERROR: Invalid No-IP password!"
+                    exit 1
+                }
+                "Multiple network devices*" {
+                    send "0\r"
+                    exp_continue
+                }
+                "Please select the Internet interface*" {
+                    send "0\r"
+                    exp_continue
+                }
+                "Please enter an update interval*" {
+                    send "\r"
+                    exp_continue
+                }
+                "Do you wish to run something at successful update*" {
+                    send "N\r"
+                    exp_continue
+                }
+                "Only one host*registered*" {
+                    exp_continue
+                }
+                "It will be used*" {
+                    exp_continue
+                }
+                "Auto configuration for*" {
+                    exp_continue
+                }
+                eof {
+                    puts "Configuration completed"
+                }
+                timeout {
+                    puts "Configuration timed out"
+                    exit 1
+                }
+            }
             EOF
               chmod +x /tmp/noip_config.exp
               
-              # Run the expect script with environment variables
-              NOIP_USERNAME="${{ secrets.NOIP_USERNAME }}" NOIP_PASSWORD="${{ secrets.NOIP_PASSWORD }}" /tmp/noip_config.exp
+              # Run the expect script
+              echo "Attempting No-IP configuration..."
+              if /tmp/noip_config.exp; then
+                echo "✅ No-IP configuration successful"
+                # Start No-IP client
+                sudo /usr/local/bin/noip2 || echo "⚠️  No-IP client failed to start, but continuing deployment"
+              else
+                echo "❌ No-IP configuration failed - invalid credentials or network issue"
+                echo "⚠️  Continuing deployment without No-IP (you'll need to access via IP address)"
+              fi
               
               # Clean up the expect script
               rm /tmp/noip_config.exp
             else
-              echo "No-IP config already exists. Skipping configuration."
+              echo "No-IP config already exists. Starting existing client..."
+              sudo /usr/local/bin/noip2 || echo "⚠️  No-IP client failed to start, but continuing deployment"
             fi
-            
-            # Start No-IP client
-            sudo /usr/local/bin/noip2
             
             # Pull the latest application image
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
