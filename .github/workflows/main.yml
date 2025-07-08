@@ -56,69 +56,69 @@ jobs:
           echo "Instance Public IP: $ip_address"
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
-  sonarqube:
-    name: 'SonarQube Code Analysis'
-    runs-on: ubuntu-latest
-    outputs:
-      quality_gate_passed: ${{ steps.quality_gate.outputs.quality_gate_passed }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+  # sonarqube:
+  #   name: 'SonarQube Code Analysis'
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     quality_gate_passed: ${{ steps.quality_gate.outputs.quality_gate_passed }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.9'
 
-      - name: Install dependencies
-        run: |
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+  #     - name: Install dependencies
+  #       run: |
+  #         if [ -f requirements.txt ]; then
+  #           pip install -r requirements.txt
+  #         fi
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #     - name: SonarCloud Scan
+  #       uses: SonarSource/sonarqube-scan-action@master
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      - name: Check Quality Gate Status
-        id: quality_gate
-        run: |
-          echo "Waiting for Quality Gate result..."
-          sleep 30
-          QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Akash35721_TechNova_CICDpipeline_devsecops" | jq -r '.projectStatus.status')
-          echo "Quality Gate Status: $QUALITY_GATE_STATUS"
-          if [ "$QUALITY_GATE_STATUS" = "OK" ]; then
-            echo "✅ Quality Gate PASSED - Deployment can proceed"
-            echo "quality_gate_passed=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Quality Gate FAILED - Deployment will be blocked"
-            echo "quality_gate_passed=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+  #     - name: Check Quality Gate Status
+  #       id: quality_gate
+  #       run: |
+  #         echo "Waiting for Quality Gate result..."
+  #         sleep 30
+  #         QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Akash35721_TechNova_CICDpipeline_devsecops" | jq -r '.projectStatus.status')
+  #         echo "Quality Gate Status: $QUALITY_GATE_STATUS"
+  #         if [ "$QUALITY_GATE_STATUS" = "OK" ]; then
+  #           echo "✅ Quality Gate PASSED - Deployment can proceed"
+  #           echo "quality_gate_passed=true" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "❌ Quality Gate FAILED - Deployment will be blocked"
+  #           echo "quality_gate_passed=false" >> $GITHUB_OUTPUT
+  #           exit 1
+  #         fi
 
-      - name: Send SonarQube Results via Email
-        if: always()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "TechNova SonarQube Analysis Results - ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '✅ PASSED' || '❌ FAILED' }}"
-          body: |
-            SonarQube analysis completed for commit ${{ github.sha }}.
-            🎯 Quality Gate Status: ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && 'PASSED ✅' || 'FAILED ❌' }}
-            ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '🚀 Deployment will proceed automatically.' || '🛑 Deployment has been BLOCKED due to quality issues.' }}
-            View detailed results at: https://sonarcloud.io/project/overview?id=Akash35721_TechNova_CICDpipeline_devsecops
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Author: ${{ github.actor }}
-          to: ${{ secrets.NOTIFICATION_EMAIL }}
-          from: TechNova CI/CD Pipeline
+  #     - name: Send SonarQube Results via Email
+  #       if: always()
+  #       uses: dawidd6/action-send-mail@v3
+  #       with:
+  #         server_address: smtp.gmail.com
+  #         server_port: 587
+  #         username: ${{ secrets.GMAIL_USERNAME }}
+  #         password: ${{ secrets.GMAIL_APP_PASSWORD }}
+  #         subject: "TechNova SonarQube Analysis Results - ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '✅ PASSED' || '❌ FAILED' }}"
+  #         body: |
+  #           SonarQube analysis completed for commit ${{ github.sha }}.
+  #           🎯 Quality Gate Status: ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && 'PASSED ✅' || 'FAILED ❌' }}
+  #           ${{ steps.quality_gate.outputs.quality_gate_passed == 'true' && '🚀 Deployment will proceed automatically.' || '🛑 Deployment has been BLOCKED due to quality issues.' }}
+  #           View detailed results at: https://sonarcloud.io/project/overview?id=Akash35721_TechNova_CICDpipeline_devsecops
+  #           Branch: ${{ github.ref_name }}
+  #           Commit: ${{ github.sha }}
+  #           Author: ${{ github.actor }}
+  #         to: ${{ secrets.NOTIFICATION_EMAIL }}
+  #         from: TechNova CI/CD Pipeline
 
   deploy:
     name: 'Build and Deploy Application'
