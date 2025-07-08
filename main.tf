@@ -1,22 +1,24 @@
-
 terraform {
-
+  # This block configures Terraform to store its state file remotely in an S3 bucket.
+  # This is a best practice for collaboration and state management.
   backend "s3" {
-    bucket = "technova-tfstate-bucket-akash21357" 
-    key    = "technova/terraform.tfstate"     
-    region = "ap-south-1"                    
+    bucket = "technova-tfstate-bucket-akash21357"
+    key    = "technova/terraform.tfstate"
+    region = "ap-south-1"
   }
 }
 
+# This block configures the AWS provider, specifying the region where resources will be created.
 provider "aws" {
-  region = "ap-south-1" 
+  region = "ap-south-1"
 }
 
-# This resource defines the firewall rules for your server.
+# This resource defines the firewall rules (Security Group) for your server.
 resource "aws_security_group" "technova_sg" {
   name        = "technova-instance-sg"
-  description = "Allow HTTP and SSH traffic"
+  description = "Allow SSH, HTTP, and HTTPS traffic"
 
+  # Allow inbound SSH traffic on port 22 for remote management.
   ingress {
     from_port   = 22
     to_port     = 22
@@ -24,6 +26,7 @@ resource "aws_security_group" "technova_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Allow inbound HTTP traffic on port 80 for the web server.
   ingress {
     from_port   = 80
     to_port     = 80
@@ -31,6 +34,16 @@ resource "aws_security_group" "technova_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # --- THIS IS THE NEW RULE ---
+  # Allow inbound HTTPS traffic on port 443 for the Caddy web server's SSL.
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow all outbound traffic from the server.
   egress {
     from_port   = 0
     to_port     = 0
@@ -41,9 +54,11 @@ resource "aws_security_group" "technova_sg" {
 
 # This resource defines the EC2 virtual server itself.
 resource "aws_instance" "technova_server" {
-  ami           = "ami-0f918f7e67a3323f0" 
-  instance_type = "t2.micro"             
+  ami           = "ami-0f918f7e67a3323f0"
+  instance_type = "t2.micro"
   key_name      = "technova-key" # Make sure this matches the name in your AWS Console
+  
+  # This attaches the security group defined above to the EC2 instance.
   vpc_security_group_ids = [aws_security_group.technova_sg.id]
 
   # This script runs on the server's first boot to install Docker.
