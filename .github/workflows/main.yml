@@ -34,13 +34,20 @@ jobs:
       - name: Ensure Instance is Running and Get IP
         id: get_ip
         run: |
-          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TechNova-Server-Terraform" "Name=instance-state-name,Values=running,stopped" --query "Reservations[0].Instances[0].InstanceId" --output text)
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=TechNova-Server-Terraform" \
+                      "Name=instance-state-name,Values=running,stopped" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text)
           if [ "$INSTANCE_ID" == "None" ]; then
             echo "No running or stopped instance found with tag 'TechNova-Server-Terraform'."
             exit 1
           fi
           echo "Found Instance ID: $INSTANCE_ID"
-          INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].State.Name" --output text)
+          INSTANCE_STATE=$(aws ec2 describe-instances \
+            --instance-ids $INSTANCE_ID \
+            --query "Reservations[0].Instances[0].State.Name" \
+            --output text)
           echo "Instance state is: $INSTANCE_STATE"
           if [ "$INSTANCE_STATE" == "stopped" ]; then
             echo "Instance is stopped. Sending start command..."
@@ -52,7 +59,10 @@ jobs:
             echo "FATAL: The instance has been terminated. A new 'terraform apply' is required."
             exit 1
           fi
-          ip_address=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+          ip_address=$(aws ec2 describe-instances \
+            --instance-ids $INSTANCE_ID \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text)
           echo "Instance Public IP: $ip_address"
           echo "ip=${ip_address}" >> $GITHUB_OUTPUT
 
@@ -89,7 +99,9 @@ jobs:
         run: |
           echo "Waiting for Quality Gate result..."
           sleep 30
-          QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Akash35721_TechNova_CICDpipeline_devsecops" | jq -r '.projectStatus.status')
+          QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Akash35721_TechNova_CICDpipeline_devsecops" \
+            | jq -r '.projectStatus.status')
           echo "Quality Gate Status: $QUALITY_GATE_STATUS"
           if [ "$QUALITY_GATE_STATUS" = "OK" ]; then
             echo "✅ Quality Gate PASSED - Deployment can proceed"
@@ -166,7 +178,7 @@ jobs:
               exit 1
             fi
             sudo chmod 666 /var/run/docker.sock
-            
+
             # Create the docker network if it doesn't exist
             docker network create technova_network || true
 
@@ -180,27 +192,35 @@ jobs:
             echo "Installing No-IP client from source..."
             sudo apt-get update
             sudo apt-get install -y build-essential
-            sudo killall noip2 || true # Kill any old running process
+            sudo killall noip2 || true
             cd /usr/local/src/
             sudo wget -O noip-duc-linux.tar.gz https://www.noip.com/client/linux/noip-duc-linux.tar.gz
             sudo tar xf noip-duc-linux.tar.gz
             cd noip-2.1.9-1/
             sudo make
             sudo cp noip2 /usr/local/bin/
+
             # Only configure if config does not exist
             if [ ! -f /usr/local/etc/no-ip2.conf ]; then
               echo "No-IP config not found. Running configuration..."
-              sudo /usr/local/bin/noip2 -C -u "${{ secrets.NOIP_USERNAME }}" -p "${{ secrets.NOIP_PASSWORD }}"
+              # Auto-detect primary network interface and pass it to noip2 -C
+              INTERFACE=$(ip route get 8.8.8.8 \
+                | awk '{for (i=1;i<=NF;i++) if ($i=="dev") print $(i+1)}')
+              sudo /usr/local/bin/noip2 -C \
+                -u "${{ secrets.NOIP_USERNAME }}" \
+                -p "${{ secrets.NOIP_PASSWORD }}" \
+                -i "${INTERFACE}"
             else
               echo "No-IP config already exists. Skipping configuration."
             fi
+
             # Start No-IP client
             sudo killall noip2 || true
             sudo /usr/local/bin/noip2
-            
+
             # Pull the latest application image
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
-            
+
             # Run your Flask application on the shared network
             docker run -d \
               --network technova_network \
@@ -208,7 +228,7 @@ jobs:
               -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
               --restart always \
               ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
-              
+
             # Run the Caddy web server
             docker run -d \
               -p 80:80 \
