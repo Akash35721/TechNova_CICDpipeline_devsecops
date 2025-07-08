@@ -149,6 +149,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
+            # Ensure Docker is running (your original, correct code)
             echo "Ensuring Docker service is running..."
             sudo systemctl start docker
             echo "Connecting to server... Waiting for Docker daemon to start..."
@@ -165,10 +166,39 @@ jobs:
               exit 1
             fi
             sudo chmod 666 /var/run/docker.sock
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
+            
+            # Create the docker network if it doesn't exist
+            docker network create technova_network || true
+
+            # Stop and remove any old containers to ensure a clean start
             docker stop technova-app || true
             docker rm technova-app || true
-            docker run -d --name technova-app -p 80:80 \
+            docker stop caddy || true
+            docker rm caddy || true
+
+            # Install and configure the No-IP client automatically
+            sudo apt-get update
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y noip2
+            sudo noip2 -C -u ${{ secrets.NOIP_USERNAME }} -p ${{ secrets.NOIP_PASSWORD }}
+            
+            # Pull the latest version of your application from DockerHub
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
+            
+            # Run your Flask application on the shared network
+            docker run -d \
+              --network technova_network \
+              --name technova-app \
               -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+              --restart always \
               ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
-            echo "Deployment to EC2 successful!"
+              
+            # Run the Caddy web server
+            docker run -d \
+              -p 80:80 \
+              -p 443:443 \
+              -p 443:443/udp \
+              --network technova_network \
+              --name caddy \
+              --restart always \
+              caddy \
+              caddy reverse-proxy --from brewhaven-app.ddns.net --to technova-app:80
