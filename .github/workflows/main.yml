@@ -121,7 +121,7 @@ jobs:
           from: TechNova CI/CD Pipeline
 
   deploy:
-    name: 'Build and Deploy Application'
+    name: 'Build, Deploy, and Monitor'
     runs-on: ubuntu-latest
     needs: [provision, sonarqube]
     if: needs.sonarqube.outputs.quality_gate_passed == 'true'
@@ -142,14 +142,14 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
 
-      - name: Deploy to EC2
+      - name: Deploy to EC2 and Update DNS
         uses: appleboy/ssh-action@master
         with:
           host: ${{ needs.provision.outputs.instance_ip }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            # Ensure Docker is running
+            # Ensure Docker is running and permissions are set
             echo "Ensuring Docker service is running..."
             sudo systemctl start docker
             echo "Connecting to server... Waiting for Docker daemon to start..."
@@ -167,121 +167,19 @@ jobs:
             fi
             sudo chmod 666 /var/run/docker.sock
             
-            # Create the docker network if it doesn't exist (suppress error if exists)
+            # Update DuckDNS with this server's IP address
+            echo "Updating DuckDNS..."
+            curl "https://www.duckdns.org/update?domains=${{ secrets.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip="
+            
+            # Create the docker network if it doesn't exist
             docker network create technova_network 2>/dev/null || echo "Network technova_network already exists"
 
-            # Stop and remove any old containers (suppress errors if containers don't exist)
+            # Stop and remove any old containers
             docker stop technova-app 2>/dev/null || echo "Container technova-app was not running"
             docker rm technova-app 2>/dev/null || echo "Container technova-app did not exist"
             docker stop caddy 2>/dev/null || echo "Container caddy was not running"
             docker rm caddy 2>/dev/null || echo "Container caddy did not exist"
 
-            # Setup No-IP client with non-interactive configuration
-            echo "Setting up No-IP client..."
-            sudo apt-get update
-            sudo apt-get install -y build-essential expect
-            
-            # Kill any existing noip2 processes
-            sudo killall noip2 2>/dev/null || true
-            
-            # Download and compile No-IP client if not already present
-            if [ ! -f /usr/local/bin/noip2 ]; then
-              echo "Installing No-IP client from source..."
-              cd /usr/local/src/
-              sudo wget -O noip-duc-linux.tar.gz https://www.noip.com/client/linux/noip-duc-linux.tar.gz
-              sudo tar xf noip-duc-linux.tar.gz
-              cd noip-2.1.9-1/
-              sudo make
-              sudo cp noip2 /usr/local/bin/
-            fi
-            
-            # Configure No-IP client if config doesn't exist
-            if [ ! -f /usr/local/etc/no-ip2.conf ]; then
-              echo "Configuring No-IP client..."
-              
-              # Escape special characters in credentials
-              ESCAPED_USERNAME=$(printf '%s\n' "${{ secrets.NOIP_USERNAME }}" | sed 's/[[\.*^$()+?{|]/\\&/g')
-              ESCAPED_PASSWORD=$(printf '%s\n' "${{ secrets.NOIP_PASSWORD }}" | sed 's/[[\.*^$()+?{|]/\\&/g')
-              
-              # Create expect script with properly escaped credentials
-              cat > /tmp/noip_config.exp << EOF
-            #!/usr/bin/expect -f
-            set timeout 30
-            set username "$ESCAPED_USERNAME"
-            set password "$ESCAPED_PASSWORD"
-            
-            spawn sudo /usr/local/bin/noip2 -C
-            expect {
-                "Please enter the login/email*" {
-                    send "\$username\r"
-                    exp_continue
-                }
-                "Please enter the password*" {
-                    send "\$password\r"
-                    exp_continue
-                }
-                "You have entered an incorrect username" {
-                    puts "ERROR: Invalid No-IP credentials!"
-                    exit 1
-                }
-                "an incorrect password" {
-                    puts "ERROR: Invalid No-IP password!"
-                    exit 1
-                }
-                "Multiple network devices*" {
-                    send "0\r"
-                    exp_continue
-                }
-                "Please select the Internet interface*" {
-                    send "0\r"
-                    exp_continue
-                }
-                "Please enter an update interval*" {
-                    send "\r"
-                    exp_continue
-                }
-                "Do you wish to run something at successful update*" {
-                    send "N\r"
-                    exp_continue
-                }
-                "Only one host*registered*" {
-                    exp_continue
-                }
-                "It will be used*" {
-                    exp_continue
-                }
-                "Auto configuration for*" {
-                    exp_continue
-                }
-                eof {
-                    puts "Configuration completed"
-                }
-                timeout {
-                    puts "Configuration timed out"
-                    exit 1
-                }
-            }
-            EOF
-              chmod +x /tmp/noip_config.exp
-              
-              # Run the expect script
-              echo "Attempting No-IP configuration..."
-              if /tmp/noip_config.exp; then
-                echo "✅ No-IP configuration successful"
-                # Start No-IP client
-                sudo /usr/local/bin/noip2 || echo "⚠️  No-IP client failed to start, but continuing deployment"
-              else
-                echo "❌ No-IP configuration failed - invalid credentials or network issue"
-                echo "⚠️  Continuing deployment without No-IP (you'll need to access via IP address)"
-              fi
-              
-              # Clean up the expect script
-              rm /tmp/noip_config.exp
-            else
-              echo "No-IP config already exists. Starting existing client..."
-              sudo /usr/local/bin/noip2 || echo "⚠️  No-IP client failed to start, but continuing deployment"
-            fi
-            
             # Pull the latest application image
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             
@@ -293,7 +191,7 @@ jobs:
               --restart always \
               ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
               
-            # Run the Caddy   web server
+            # Run the Caddy web server with the new DuckDNS domain
             docker run -d \
               -p 80:80 \
               -p 443:443 \
@@ -302,6 +200,53 @@ jobs:
               --name caddy \
               --restart always \
               caddy \
-              caddy reverse-proxy --from brewhaven-app.ddns.net --to technova-app:80
+              caddy reverse-proxy --from ${{ secrets.DUCKDNS_DOMAIN }}.duckdns.org --to technova-app:80
               
             echo "Deployment completed successfully!"
+
+      - name: Install and Configure CloudWatch Agent
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ needs.provision.outputs.instance_ip }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            # Install CloudWatch Agent
+            wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+            sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+            
+            # Create CloudWatch Agent config file
+            sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json <<EOF
+            {
+              "agent": {
+                "run_as_user": "root"
+              },
+              "logs": {
+                "logs_collected": {
+                  "files": {
+                    "collect_list": [
+                      {
+                        "file_path": "/var/lib/docker/containers/*/*.log",
+                        "log_group_name": "TechNova-App-Logs",
+                        "log_stream_name": "{instance_id}-docker"
+                      },
+                      {
+                        "file_path": "/var/log/auth.log",
+                        "log_group_name": "TechNova-Security-Logs",
+                        "log_stream_name": "{instance_id}-auth"
+                      },
+                      {
+                        "file_path": "/var/log/syslog",
+                        "log_group_name": "TechNova-System-Logs",
+                        "log_stream_name": "{instance_id}-syslog"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+            EOF'
+
+            # Start the CloudWatch Agent
+            sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
+            echo "CloudWatch Agent configured and started."
