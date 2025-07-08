@@ -293,7 +293,7 @@ jobs:
               --restart always \
               ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
               
-            # Run the Caddy web server
+            # Run the Caddy   web server
             docker run -d \
               -p 80:80 \
               -p 443:443 \
