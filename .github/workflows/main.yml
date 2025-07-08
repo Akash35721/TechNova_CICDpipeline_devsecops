@@ -177,6 +177,7 @@ jobs:
             docker rm caddy || true
 
             # Manually install No-IP client from source
+            echo "Installing No-IP client from source..."
             sudo apt-get update
             sudo apt-get install -y build-essential
             cd /usr/local/src/
@@ -184,7 +185,9 @@ jobs:
             sudo tar xf noip-duc-linux.tar.gz
             cd noip-2.1.9-1/
             sudo make install
-            sudo noip2 -C -u ${{ secrets.NOIP_USERNAME }} -p ${{ secrets.NOIP_PASSWORD }}
+            # The 'make install' process will prompt for credentials. We provide them here.
+            # This command creates the config file and starts the client.
+            sudo /usr/local/bin/noip2
             
             # Pull the latest application image
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
