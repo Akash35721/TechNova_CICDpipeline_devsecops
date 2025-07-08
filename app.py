@@ -4,16 +4,14 @@ import os
 
 app = Flask(__name__)
 
-# Configure the Gemini API
-# gemini_api_key = os.getenv("GEMINI_API_KEY")
-# if not gemini_api_key:
-#     raise ValueError("No GEMINI_API_KEY set for Flask application")
-# genai.configure(api_key=gemini_api_key)               
-# model = genai.GenerativeModel('gemini-2.5-flash')
-
-
-genai.configure(api_key='AIzaSyAuXbTLHgEpVXj_CgTTIjy5ead3PDL9S5c')               
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if not gemini_api_key:
+    raise ValueError("No GEMINI_API_KEY set for Flask application")
+genai.configure(api_key=gemini_api_key)               
 model = genai.GenerativeModel('gemini-2.5-flash')
+
+
+
 
 
 
