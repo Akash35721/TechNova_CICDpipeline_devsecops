@@ -287,7 +287,7 @@
 
 #             # Start the CloudWatch Agent
 #             sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
-#             echo "CloudWatch Agent configured for METRICS and started."
+#             echo "CloudWatch Agent configured for METRICS and started."  
 
 
 
