@@ -75,7 +75,7 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
+          pip install -r requirements.txt
           fi
 
       - name: SonarCloud Scan
@@ -167,23 +167,28 @@ jobs:
             fi
             sudo chmod 666 /var/run/docker.sock
             
-            # Update DuckDNS with this server's IP address
-            echo "Updating DuckDNS..."
-            curl "https://www.duckdns.org/update?domains=${{ secrets.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip="
+            # --- IMPROVED DUCKDNS UPDATE SCRIPT ---
+            echo "Attempting to update DuckDNS for domain: ${{ secrets.DUCKDNS_DOMAIN }}"
+            DUCKDNS_RESPONSE=$(curl "https://www.duckdns.org/update?domains=${{ secrets.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=")
             
-            # Create the docker network if it doesn't exist
+            if [ "$DUCKDNS_RESPONSE" = "OK" ]; then
+              echo "✅ DuckDNS update successful!"
+            else
+              echo "❌ ERROR: DuckDNS update failed. Response was: $DUCKDNS_RESPONSE"
+              echo "Please check your DUCKDNS_DOMAIN and DUCKDNS_TOKEN secrets in GitHub."
+              exit 1
+            fi
+            # --- END OF IMPROVED SCRIPT ---
+            
             docker network create technova_network 2>/dev/null || echo "Network technova_network already exists"
 
-            # Stop and remove any old containers
             docker stop technova-app 2>/dev/null || echo "Container technova-app was not running"
             docker rm technova-app 2>/dev/null || echo "Container technova-app did not exist"
             docker stop caddy 2>/dev/null || echo "Container caddy was not running"
             docker rm caddy 2>/dev/null || echo "Container caddy did not exist"
 
-            # Pull the latest application image
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
             
-            # Run your Flask application on the shared network
             docker run -d \
               --network technova_network \
               --name technova-app \
@@ -191,7 +196,6 @@ jobs:
               --restart always \
               ${{ secrets.DOCKERHUB_USERNAME }}/technova-app:latest
               
-            # Run the Caddy web server with the new DuckDNS domain
             docker run -d \
               -p 80:80 \
               -p 443:443 \
