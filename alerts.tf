@@ -47,7 +47,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_test_alarm" {
   alarm_name          = "TechNova-High-CPU-Test"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   statistic           = "Average"
-  threshold           = 10
+  threshold           = 80
   period              = "60"
   evaluation_periods  = "1"
   metric_name         = "CPUUtilization"
