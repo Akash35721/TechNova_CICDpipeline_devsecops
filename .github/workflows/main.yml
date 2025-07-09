@@ -174,14 +174,22 @@ jobs:
             echo "Attempting to update DuckDNS for domain: ${{ secrets.DUCKDNS_DOMAIN }}"
             
             # This command now sends the correct IP address
-            DUCKDNS_RESPONSE=$(curl "https://www.duckdns.org/update?domains=${{ secrets.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=${INSTANCE_IP}")
+            
+
+
+            echo "Attempting to update DuckDNS for domain: ${{ secrets.DUCKDNS_DOMAIN }}"
+            DUCKDNS_RESPONSE=$(curl "https://www.duckdns.org/update?domains=${{ secrets.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=")
             
             if [ "$DUCKDNS_RESPONSE" = "OK" ]; then
               echo "✅ DuckDNS update successful!"
             else
               echo "❌ ERROR: DuckDNS update failed. Response was: $DUCKDNS_RESPONSE"
+              echo "Please check your DUCKDNS_DOMAIN and DUCKDNS_TOKEN secrets in GitHub."
               exit 1
             fi
+
+
+
             echo "Waiting a few seconds for DNS propagation..."
             sleep 30
             
