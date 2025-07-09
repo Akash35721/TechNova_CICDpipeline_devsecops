@@ -98,7 +98,7 @@ resource "aws_cloudwatch_metric_alarm" "high_network_out_test_alarm" {
 # // for network 
 
 
-# # Download a 10MB file to generate network traffic
+# # Download   a 10MB file to generate network traffic
 # wget -O /dev/null http://speedtest.tele2.net/10MB.zip
 
     
