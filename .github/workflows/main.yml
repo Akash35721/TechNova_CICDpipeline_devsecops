@@ -216,15 +216,48 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            # Install CloudWatch Agent
+            # Install CloudWatch Agent (if not already done)
             wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
             sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
             
-            # Create CloudWatch Agent config file
+            # Create CloudWatch Agent config file WITH METRICS
             sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json <<EOF
             {
               "agent": {
                 "run_as_user": "root"
+              },
+              "metrics": {
+                "metrics_collected": {
+                  "cpu": {
+                    "measurement": [
+                      "cpu_usage_idle",
+                      "cpu_usage_iowait",
+                      "cpu_usage_user",
+                      "cpu_usage_system"
+                    ],
+                    "metrics_collection_interval": 60,
+                    "total_cpu": true
+                  },
+                  "disk": {
+                    "measurement": [
+                      "used_percent",
+                      "inodes_free"
+                    ],
+                    "metrics_collection_interval": 60,
+                    "resources": [
+                      "/"
+                    ]
+                  },
+                  "mem": {
+                    "measurement": [
+                      "mem_used_percent"
+                    ],
+                    "metrics_collection_interval": 60
+                  }
+                },
+                "append_dimensions": {
+                  "InstanceId": "${aws:InstanceId}"
+                }
               },
               "logs": {
                 "logs_collected": {
@@ -254,4 +287,4 @@ jobs:
 
             # Start the CloudWatch Agent
             sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
-            echo "CloudWatch Agent configured and started."
+            echo "CloudWatch Agent configured for METRICS and started."
