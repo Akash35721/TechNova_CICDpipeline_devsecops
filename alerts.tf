@@ -21,7 +21,7 @@ resource "aws_sns_topic_subscription" "sms_subscription" {
 
 #################################################################
 #  SNS TOPIC POLICY
-#  This grants CloudWatch permission to publish to the topic.
+#  This grants CloudWatch pe rmission to publish to the topic.
 #################################################################
 resource "aws_sns_topic_policy" "technova_alerts_policy" {
   arn = data.aws_sns_topic.technova_alerts_topic.arn
