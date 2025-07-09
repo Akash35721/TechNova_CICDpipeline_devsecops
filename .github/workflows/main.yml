@@ -167,20 +167,25 @@ jobs:
             fi
             sudo chmod 666 /var/run/docker.sock
             
-            # --- IMPROVED DUCKDNS UPDATE SCRIPT ---
+            # --- FINAL DUCKDNS UPDATE SCRIPT ---
+            # Explicitly get the instance's public IP address to ensure accuracy
+            INSTANCE_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+            echo "This server's Public IP is: $INSTANCE_IP"
             echo "Attempting to update DuckDNS for domain: ${{ secrets.DUCKDNS_DOMAIN }}"
-            DUCKDNS_RESPONSE=$(curl "https://www.duckdns.org/update?domains=${{ secrets.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=")
+            
+            # This command now sends the correct IP address
+            DUCKDNS_RESPONSE=$(curl "https://www.duckdns.org/update?domains=${{ secrets.DUCKDNS_DOMAIN }}&token=${{ secrets.DUCKDNS_TOKEN }}&ip=${INSTANCE_IP}")
             
             if [ "$DUCKDNS_RESPONSE" = "OK" ]; then
               echo "✅ DuckDNS update successful!"
             else
               echo "❌ ERROR: DuckDNS update failed. Response was: $DUCKDNS_RESPONSE"
-              echo "Please check your DUCKDNS_DOMAIN and DUCKDNS_TOKEN secrets in GitHub."
               exit 1
             fi
-            echo "Waiting for 30 seconds for DNS propagation..."
+            echo "Waiting a few seconds for DNS propagation..."
             sleep 30
             
+           
             docker network create technova_network 2>/dev/null || echo "Network technova_network already exists"
 
             docker stop technova-app 2>/dev/null || echo "Container technova-app was not running"
@@ -205,7 +210,7 @@ jobs:
               --name caddy \
               --restart always \
               caddy \
-              caddy reverse-proxy --from ${{ secrets.DUCKDNS_DOMAIN }}.duckdns.org --to technova-app:80 
+              caddy reverse-proxy --from ${{ secrets.DUCKDNS_DOMAIN }}.duckdns.org --to technova-app:80
               
             echo "Deployment completed successfully!"
 
@@ -287,7 +292,7 @@ jobs:
 
             # Start the CloudWatch Agent
             sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
-            echo "CloudWatch Agent configured for METRICS and started."  
+            echo "CloudWatch Agent configured for METRICS and started."
 
 
 
