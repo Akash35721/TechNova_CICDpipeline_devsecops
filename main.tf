@@ -70,7 +70,7 @@ resource "aws_instance" "technova_server" {
               sudo systemctl enable docker
               sudo usermod -aG docker ubuntu
               EOF
-
+  iam_instance_profile = aws_iam_instance_profile.technova_instance_profile.name //i am role attached for cloudwatch to send logs 
   tags = {
     Name = "TechNova-Server-Terraform"
   }
