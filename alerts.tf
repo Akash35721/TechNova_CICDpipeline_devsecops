@@ -9,6 +9,27 @@
 data "aws_sns_topic" "technova_alerts_topic" {
   name = "TechNova-High-CPU-Alerts"
 }
+#################################################################
+#  SNS TOPIC POLICY
+#  This is the final fix. It grants CloudWatch Alarms the
+#  permission to publish messages to your SNS topic.
+#################################################################
+resource "aws_sns_topic_policy" "technova_alerts_policy" {
+  arn = data.aws_sns_topic.technova_alerts_topic.arn
+  policy = jsonencode({
+    Version   = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow",
+        Principal = {
+          Service = "cloudwatch.amazonaws.com"
+        },
+        Action   = "SNS:Publish",
+        Resource = data.aws_sns_topic.technova_alerts_topic.arn
+      }
+    ]
+  })
+}
 
 #################################################################
 #  ALARM 1: HIGH CPU UTILIZATION (SENSITIVE FOR TESTING)
