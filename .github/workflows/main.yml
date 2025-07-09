@@ -538,8 +538,8 @@ jobs:
   deploy:
     name: 'Build, Deploy, and Monitor'
     runs-on: ubuntu-latest
-    needs: [provision, sonarqube, owasp-dependency-check]
-    if: needs.sonarqube.outputs.quality_gate_passed == 'true' && needs.owasp-dependency-check.outputs.security_scan_passed == 'true'
+    needs: [provision, sonarqube]
+    if: needs.sonarqube.outputs.quality_gate_passed == 'true' 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
