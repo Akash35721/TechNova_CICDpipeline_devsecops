@@ -6,6 +6,8 @@
 #################################################################
 resource "aws_sns_topic" "technova_alerts_topic" {
   name = "TechNova-Performance-Alerts"
+    kms_master_key_id = "alias/aws/sns"
+  
 }
 
 
@@ -13,7 +15,7 @@ resource "aws_sns_topic_subscription" "email_subscription" {
   topic_arn = aws_sns_topic.technova_alerts_topic.arn
   protocol  = "email"
 
-  endpoint  = "your-email@example.com"
+  endpoint  = "akaout08@gmail.com"
 }
 
 
