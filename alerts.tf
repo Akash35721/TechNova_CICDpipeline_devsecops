@@ -1,7 +1,7 @@
 # In alerts.tf
 
 #################################################################
-#  DATA SOURCE: FIND THE EXISTING SNS TOPIC
+#  DATA SO URCE: FIND THE EXISTING SNS TOPIC
 #  This looks up the SNS Topic you created manually.
 #################################################################
 data "aws_sns_topic" "technova_alerts_topic" {
