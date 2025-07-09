@@ -205,7 +205,7 @@ jobs:
               --name caddy \
               --restart always \
               caddy \
-              caddy reverse-proxy --from ${{ secrets.DUCKDNS_DOMAIN }}.duckdns.org --to technova-app:80 --acme-ca https://acme-staging-v02.api.letsencrypt.org/directory
+              caddy reverse-proxy --from ${{ secrets.DUCKDNS_DOMAIN }}.duckdns.org --to technova-app:80 
               
             echo "Deployment completed successfully!"
 

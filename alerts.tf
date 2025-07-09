@@ -1,98 +1,55 @@
 # In alerts.tf
 
 #################################################################
-#  NOTIFICATION CHANNEL (SNS)
-#  This sends alerts to the email you have in your GitHub Secrets.
+#  DATA SOURCE: FIND THE EXISTING SNS TOPIC
+#  This looks up the SNS Topic you created manually.
+#  It is resilient because it doesn't manage a resource requiring
+#  human confirmation.
 #################################################################
-resource "aws_sns_topic" "technova_alerts_topic" {
-  name = "TechNova-Performance-Alerts"
-    kms_master_key_id = "alias/aws/sns"
-  
+data "aws_sns_topic" "technova_alerts_topic" {
+  name = "TechNova-High-CPU-Alerts"
 }
-
-
-resource "aws_sns_topic_subscription" "email_subscription" {
-  topic_arn = aws_sns_topic.technova_alerts_topic.arn
-  protocol  = "email"
-
-  endpoint  = "akaout08@gmail.com"
-}
-
-# create a SNS topic also that gives permission to cloudwatch to publish messages to this topic
-resource "aws_sns_topic_policy" "technova_alerts_policy" {
-  arn = aws_sns_topic.technova_alerts_topic.arn
-  policy = jsonencode({
-    Version   = "2012-10-17",
-    Statement = [
-      {
-        Effect    = "Allow",
-        Principal = {
-          Service = "cloudwatch.amazonaws.com"
-        },
-        Action   = "SNS:Publish",
-        Resource = aws_sns_topic.technova_alerts_topic.arn
-      }
-    ]
-  })
-}
-
 
 #################################################################
 #  ALARM 1: HIGH CPU UTILIZATION (SENSITIVE FOR TESTING)
-#  Triggers if average CPU is over 75% for just 1 minute.
 #################################################################
 resource "aws_cloudwatch_metric_alarm" "high_cpu_test_alarm" {
   alarm_name          = "TechNova-High-CPU-Test"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   statistic           = "Average"
-  threshold           = 75 # Trigger at 75% CPU
-
-  # ----- Settings for Rapid Testing -----
-  period              = "60"  # Check every 60 seconds
-  evaluation_periods  = "1"   # Trigger after 1 period (1 minute)
-  # ------------------------------------
-
-  # ----- Metric Details -----
+  threshold           = 75
+  period              = "60"
+  evaluation_periods  = "1"
   metric_name         = "CPUUtilization"
   namespace           = "AWS/EC2"
   dimensions = {
     InstanceId = aws_instance.technova_server.id
   }
-  # -------------------------
-
   alarm_description = "TEST ALARM: CPU is 75% or higher for 1 minute."
-  alarm_actions     = [aws_sns_topic.technova_alerts_topic.arn]
-  ok_actions        = [aws_sns_topic.technova_alerts_topic.arn]
+  # This now refers to the topic found by the data source
+  alarm_actions     = [data.aws_sns_topic.technova_alerts_topic.arn]
+  ok_actions        = [data.aws_sns_topic.technova_alerts_topic.arn]
 }
-
 
 #################################################################
 #  ALARM 2: HIGH NETWORK OUT (SENSITIVE FOR TESTING)
-#  Triggers if network output exceeds 5 MB in 1 minute.
 #################################################################
 resource "aws_cloudwatch_metric_alarm" "high_network_out_test_alarm" {
   alarm_name          = "TechNova-High-Network-Out-Test"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   statistic           = "Sum"
-  # Trigger if more than 5,000,000 bytes (5 MB) are sent out
-  threshold           = 5000000 
-
-  # ----- Settings for Rapid Testing -----
-  period              = "60" # Check every 60 seconds
-  evaluation_periods  = "1"  # Trigger after 1 period (1 minute)
-  # ------------------------------------
-
-  # ----- Metric Details -----
+  threshold           = 5000000
+  period              = "60"
+  evaluation_periods  = "1"
   metric_name         = "NetworkOut"
   namespace           = "AWS/EC2"
   dimensions = {
     InstanceId = aws_instance.technova_server.id
   }
-  # -------------------------
-  
   alarm_description = "TEST ALARM: Network Out is over 5MB in 1 minute."
-  alarm_actions     = [aws_sns_topic.technova_alerts_topic.arn]
-  ok_actions        = [aws_sns_topic.technova_alerts_topic.arn]
+  # This also refers to the topic found by the data source
+  alarm_actions     = [data.aws_sns_topic.technova_alerts_topic.arn]
+  ok_actions        = [data.aws_sns_topic.technova_alerts_topic.arn]
 }
 
 
@@ -113,3 +70,5 @@ resource "aws_cloudwatch_metric_alarm" "high_network_out_test_alarm" {
 
 # # Download a 10MB file to generate network traffic
 # wget -O /dev/null http://speedtest.tele2.net/10MB.zip
+
+    
