@@ -178,7 +178,8 @@ jobs:
               echo "Please check your DUCKDNS_DOMAIN and DUCKDNS_TOKEN secrets in GitHub."
               exit 1
             fi
-            # --- END OF IMPROVED SCRIPT ---
+            echo "Waiting for 30 seconds for DNS propagation..."
+            sleep 30
             
             docker network create technova_network 2>/dev/null || echo "Network technova_network already exists"
 
