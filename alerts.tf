@@ -18,6 +18,24 @@ resource "aws_sns_topic_subscription" "email_subscription" {
   endpoint  = "akaout08@gmail.com"
 }
 
+# create a SNS topic also that gives permission to cloudwatch to publish messages to this topic
+resource "aws_sns_topic_policy" "technova_alerts_policy" {
+  arn = aws_sns_topic.technova_alerts_topic.arn
+  policy = jsonencode({
+    Version   = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow",
+        Principal = {
+          Service = "cloudwatch.amazonaws.com"
+        },
+        Action   = "SNS:Publish",
+        Resource = aws_sns_topic.technova_alerts_topic.arn
+      }
+    ]
+  })
+}
+
 
 #################################################################
 #  ALARM 1: HIGH CPU UTILIZATION (SENSITIVE FOR TESTING)
