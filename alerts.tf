@@ -3,16 +3,25 @@
 #################################################################
 #  DATA SOURCE: FIND THE EXISTING SNS TOPIC
 #  This looks up the SNS Topic you created manually.
-#  It is resilient because it doesn't manage a resource requiring
-#  human confirmation.
 #################################################################
 data "aws_sns_topic" "technova_alerts_topic" {
   name = "TechNova-High-CPU-Alerts"
 }
+
+#################################################################
+#  SNS SUBSCRIPTION: SMS NOTIFICATION
+#  This sends alerts directly to your phone.
+#################################################################
+resource "aws_sns_topic_subscription" "sms_subscription" {
+  topic_arn = data.aws_sns_topic.technova_alerts_topic.arn
+  protocol  = "sms"
+  endpoint  = "+919368076599" 
+}
+
+
 #################################################################
 #  SNS TOPIC POLICY
-#  This is the final fix. It grants CloudWatch Alarms the
-#  permission to publish messages to your SNS topic.
+#  This grants CloudWatch permission to publish to the topic.
 #################################################################
 resource "aws_sns_topic_policy" "technova_alerts_policy" {
   arn = data.aws_sns_topic.technova_alerts_topic.arn
@@ -38,7 +47,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_test_alarm" {
   alarm_name          = "TechNova-High-CPU-Test"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   statistic           = "Average"
-  threshold           = 10
+  threshold           = 
   period              = "60"
   evaluation_periods  = "1"
   metric_name         = "CPUUtilization"
