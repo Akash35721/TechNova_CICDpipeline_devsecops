@@ -49,7 +49,7 @@ jobs:
             aws ec2 wait instance-running --instance-ids $INSTANCE_ID
             echo "Instance is now running."
           elif [ "$INSTANCE_STATE" == "terminated" ]; then
-            echo "FATAL: The instance has been terminated. A new 'terraform apply' is required."
+            echo "FATAL: The insta nce has been terminated. A new 'terraform apply' is required."
             exit 1
           fi
           ip_address=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
